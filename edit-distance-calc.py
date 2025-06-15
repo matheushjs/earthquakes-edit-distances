@@ -24,7 +24,7 @@ def pklload(file):
     with open(file, "rb") as fp:
         return pickle.load(fp)
 
-parser = argparse.ArgumentParser(prog='Llama Model Trainer')
+parser = argparse.ArgumentParser(prog='Calculator of Edit Distances')
 parser.add_argument("--region",
         help="Region to analyze.",
         default="ja",
