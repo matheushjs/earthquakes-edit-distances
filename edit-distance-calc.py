@@ -32,7 +32,7 @@ parser.add_argument("--region",
 parser.add_argument("--minmag",
         help="Minimum magnitude.",
         type=float,
-        default=-1)
+        default=0)
 parser.add_argument("--nthreads",
         help="Number of threads to use.",
         type=int,
@@ -41,10 +41,18 @@ parser.add_argument("--inputw",
         help="Size of the time window used for making predictions.",
         type=int,
         default=7)
+parser.add_argument("--outputw",
+        help="Size of the time window for which a prediction is sought.",
+        type=int,
+        default=1)
 parser.add_argument("--tlambda",
         help="Multiplier of the lambda for timestamps.",
         type=float,
         default=100.0)
+parser.add_argument("--outdir",
+        help="Directory to output the results.",
+        type=str,
+        default="./")
 args = parser.parse_args()
 
 if args.minmag < 0 and args.region == "jma":
@@ -56,11 +64,17 @@ for i, j in args._get_kwargs():
     print("{}: {}".format(i, j))
 print("==================")
 
-EXPERIMENT_NAME = "-".join([ f'distance-matrix-{args.region}' ] + \
-    [ f"{i}{j}" for i, j in args._get_kwargs() ]
-)
-
+EXPERIMENT_NAME = "-".join([
+    f"distance-matrix",
+    f"{args.region}",
+    f"minmag{args.minmag}",
+    f"inputw{args.inputw}",
+    f"outputw{args.outputw}",
+    f"tlambda{args.tlambda:.3g}"
+])
 print(f"Experiment name: {EXPERIMENT_NAME}")
+
+raise Exception
 
 regionToDatafile = {
     "ja": "../japan.csv",
@@ -94,7 +108,7 @@ for i in range(len(data)):
     
     newCol.append(ndays)
     newCol2.append(nsecs)
-    
+
 data["day.number"] = newCol
 data["time.seconds"] = newCol2
 
@@ -110,7 +124,7 @@ for i in range(len(ss)):
     ndays = (dateObj - initDate).days
     
     newCol.append(ndays)
-    
+
 ss["day.number"] = newCol
 
 allX_quakes = []
@@ -129,7 +143,7 @@ allY_dayNumbers = []
 W = args.inputw
 
 # Prediction window
-PRED_WINDOW = 1
+PRED_WINDOW = args.outputw
 
 dayNumbers = data["day.number"] # To make things faster, save it in a variable
 ssDayNumbers = ss["day.number"]
@@ -279,4 +293,9 @@ for i in range(N):
     distanceMatrix[i, (i+1):] = allDistances[i]
     distanceMatrix[(i+1):, i] = allDistances[i]
 
-np.save(f"{EXPERIMENT_NAME}.npy", distanceMatrix)
+try:
+    # This might fail if the user choses an output directory that is in an external HD
+    np.save(os.path.join(args.outdir, f"{EXPERIMENT_NAME}.npy"), distanceMatrix)
+except:
+    # In that case, we save it in the current directory
+    np.save(os.path.join("./", f"{EXPERIMENT_NAME}.npy"), distanceMatrix)
