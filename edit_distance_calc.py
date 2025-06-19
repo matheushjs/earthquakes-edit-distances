@@ -9,7 +9,7 @@ import copy
 import seaborn as sns
 import multiprocessing as mp
 import time
-import argparse, sys, os
+import argparse, sys, os, random
 from data_loaders import load_dataset
 
 # import os, sys
@@ -54,6 +54,9 @@ parser.add_argument("--outdir",
         help="Directory to output the results.",
         type=str,
         default="./")
+parser.add_argument("--dry-run",
+        help="Calculate only a small portion of the edit distances" ,
+        action='store_true')
 args = parser.parse_args()
 
 if args.minmag < 0 and args.region == "jma":
@@ -185,7 +188,10 @@ def calculateDistances(idx):
     
     for i in range(idx+1, N):
         theirX = allX_quakes[i]
-        distances.append(editDistance(myX, theirX, baselineLambdas))
+        if args.dry_run and random.random() > 0.00005:
+            distances.append(-1)
+        else:
+            distances.append(editDistance(myX, theirX, baselineLambdas))
         #distances.append(editDistance2(myX, theirX, baselineLambdas2))
     
     return distances
