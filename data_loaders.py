@@ -49,6 +49,9 @@ def load_dataset(region, minmag=0):
 
     data = pd.read_csv(regionToDatafile[region])
 
+    if minmag == 0 and (args.region == "jma" or args.region == "jmatoho"):
+        minmag = 2.7
+
     data = data[data["magnitude"] >= minmag]
     data = data.query("year <= 2021").query("year < 2021 or month < 9")
     data = data.copy().reset_index(drop=True) # Ensures we are not working with a pandas slice

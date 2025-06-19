@@ -54,9 +54,6 @@ parser.add_argument("--partial-n",
         default=500)
 args = parser.parse_args()
 
-if args.minmag < 0 and args.region == "jma":
-    args.minmag = 2.7
-
 print("Beginning program.")
 print("Command executed: {}".format(' '.join(sys.argv)))
 for i, j in args._get_kwargs():
@@ -122,8 +119,6 @@ def editDistance(data1, data2, lambdas, lambdaDeletion=1):
     row_ind, col_ind = linear_sum_assignment(M)
 
     return M[row_ind,col_ind].sum()
-
-
 
 data = load_dataset(args.region, args.minmag)
 
