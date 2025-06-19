@@ -74,8 +74,6 @@ EXPERIMENT_NAME = "-".join([
 ])
 print(f"Experiment name: {EXPERIMENT_NAME}")
 
-raise Exception
-
 regionToDatafile = {
     "ja": "../japan.csv",
     "gr": "../greece.csv",
