@@ -49,7 +49,7 @@ def load_dataset(region, minmag=0):
 
     data = pd.read_csv(regionToDatafile[region])
 
-    if minmag == 0 and (args.region == "jma" or args.region == "jmatoho"):
+    if minmag == 0 and (region == "jma" or region == "jmatoho"):
         minmag = 2.7
 
     data = data[data["magnitude"] >= minmag]
