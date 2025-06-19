@@ -43,8 +43,8 @@ def load_dataset(region, minmag=0):
         "stil": "../greece.csv",
         "nz": "../newzealand.csv",
         "well": "../newzealand.csv",
-        "jma": "../new-japan-dataset/jma-japan-earthquakes-mag2.csv",
-        "jmatoho": "../new-japan-dataset/jma-japan-earthquakes-mag2.csv"
+        "jma": "../jma-japan-earthquakes-mag2.csv",
+        "jmatoho": "../jma-japan-earthquakes-mag2.csv"
     }
 
     data = pd.read_csv(regionToDatafile[region])
