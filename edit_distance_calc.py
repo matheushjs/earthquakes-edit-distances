@@ -10,6 +10,7 @@ import seaborn as sns
 import multiprocessing as mp
 import time
 import argparse, sys, os
+from data_loaders import load_dataset
 
 # import os, sys
 # from astropy.time import Time
@@ -36,7 +37,7 @@ parser.add_argument("--minmag",
 parser.add_argument("--nthreads",
         help="Number of threads to use.",
         type=int,
-        default=22)
+        default=8)
 parser.add_argument("--inputw",
         help="Size of the time window used for making predictions.",
         type=int,
@@ -74,41 +75,7 @@ EXPERIMENT_NAME = "-".join([
 ])
 print(f"Experiment name: {EXPERIMENT_NAME}")
 
-regionToDatafile = {
-    "ja": "../japan.csv",
-    "gr": "../greece.csv",
-    "nz": "../newzealand.csv",
-    "jma": "../jma-japan-earthquakes-mag2.csv"
-}
-
-#if __name__ == "__main__":
-
-data = pd.read_csv(regionToDatafile[args.region])
-
-data = data[data["magnitude"] >= args.minmag].copy()
-data = data.query("year <= 2021").query("year < 2021 or month < 9")
-
-initDate = dt.datetime(2000, 1, 1)
-newCol = []
-newCol2 = []
-
-for i in range(len(data)):
-    datum = data.iloc[i,:]
-    dateObj = dt.datetime(datum["year"], datum["month"], datum["day"])
-    ndays = (dateObj - initDate).days
-
-    try:
-        dateObj = dt.datetime(datum["year"], datum["month"], datum["day"], datum["hour"], datum["minute"], int(datum["second"]))
-    except Exception:
-        dateObj = dt.datetime(datum["year"], datum["month"], datum["day"], datum["hour"], datum["minute"])
-
-    nsecs = dateObj.timestamp() - initDate.timestamp()
-    
-    newCol.append(ndays)
-    newCol2.append(nsecs)
-
-data["day.number"] = newCol
-data["time.seconds"] = newCol2
+data = load_dataset(args.region, args.minmag)
 
 ss = pd.read_csv("../sunspots.csv")
 
@@ -272,7 +239,7 @@ try:
 except Exception: pass
 
 # Deleting some variables here to minimize memory usage by child processes
-del newCol, newCol2, data, slic, ss, ssDistanceMatrix
+del data, slic, ss, ssDistanceMatrix
 
 beg = time.time()
 
