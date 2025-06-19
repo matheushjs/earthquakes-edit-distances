@@ -205,7 +205,7 @@ def calculateDistances(idx):
 
 if args.partial:
     valid_idxs = random.sample(range(len(allX_quakes) // 2), k=args.partial_n)
-    print(sorted(valid_idxs))
+    #print(sorted(valid_idxs))
     valid_idxs = set(valid_idxs)
 else:
     valid_idxs = set(range(len(allX_quakes)))
