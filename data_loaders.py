@@ -3,6 +3,8 @@ import pandas as pd
 import datetime as dt
 import time
 
+VALID_REGIONS = ["ja", "gr", "nz", "jma", "toho", "well", "stil", "jmatoho"]
+
 def add_time_columns(data):
     initDate = dt.datetime(2000, 1, 1)
     newCol = []
@@ -12,13 +14,13 @@ def add_time_columns(data):
 
     for i in range(len(data)):
         datum = data.iloc[i,:]
-        dateObj = dt.datetime(datum["year"], datum["month"], datum["day"]) # Assume existence of "year", "month" and "day"
+        dateObj = dt.datetime(int(datum["year"]), int(datum["month"]), int(datum["day"]))
         ndays = (dateObj - initDate).days
 
         try:
-            dateObj = dt.datetime(datum["year"], datum["month"], datum["day"], int(datum["hour"]), int(datum["minute"]), int(datum["second"]))
+            dateObj = dt.datetime(int(datum["year"]), int(datum["month"]), int(datum["day"]), int(datum["hour"]), int(datum["minute"]), int(datum["second"]))
         except Exception:
-            dateObj = dt.datetime(datum["year"], datum["month"], datum["day"], int(datum["hour"]), int(datum["minute"]))
+            dateObj = dt.datetime(int(datum["year"]), int(datum["month"]), int(datum["day"]), int(datum["hour"]), int(datum["minute"]))
 
         nsecs = dateObj.timestamp() - initDate.timestamp()
         
@@ -30,9 +32,8 @@ def add_time_columns(data):
 
     return data
 
-valid_regions = ["ja", "gr", "nz", "jma", "toho", "well", "stil", "jmatoho"]
 def load_dataset(region, minmag=0):
-    if region not in valid_regions:
+    if region not in VALID_REGIONS:
         raise Exception(f"Invalid region: {region}.")
 
     regionToDatafile = {
@@ -42,8 +43,8 @@ def load_dataset(region, minmag=0):
         "stil": "../greece.csv",
         "nz": "../newzealand.csv",
         "well": "../newzealand.csv",
-        "jma": "../jma-japan-earthquakes-mag2.csv",
-        "jmatoho": "../jma-japan-earthquakes-mag2.csv"
+        "jma": "../new-japan-dataset/jma-japan-earthquakes-mag2.csv",
+        "jmatoho": "../new-japan-dataset/jma-japan-earthquakes-mag2.csv"
     }
 
     data = pd.read_csv(regionToDatafile[region])
@@ -54,7 +55,20 @@ def load_dataset(region, minmag=0):
 
     data = add_time_columns(data)
 
-    if region in ["toho", "well", "stil", "jmatoho"]:
-        raise Exception("Region not implemented")
+    if region == "toho" or region == "jmatoho":
+        points = data[["longitude", "latitude"]].copy()
+        centroid = np.array([143, 37.9])
+        idx = np.sqrt(np.sum((points - centroid)**2, axis=1)) < 2.8
+        data = data[idx].copy().reset_index(drop=True)
+    elif region == "well":
+        points = data[["longitude", "latitude"]].copy()
+        centroid = np.array([174.776230, -41.286461])
+        idx = np.sqrt(np.sum((points - centroid)**2, axis=1)) < 2.8
+        data = data[idx].copy().reset_index(drop=True)
+    elif region == "stil":
+        points = data[["longitude", "latitude"]].copy()
+        centroid = np.array([21.25, 37.5])
+        idx = np.sqrt(np.sum((points - centroid)**2, axis=1)) < 2
+        data = data[idx].copy().reset_index(drop=True)
     
     return data

@@ -10,7 +10,7 @@ import seaborn as sns
 import multiprocessing as mp
 import time
 import argparse, sys, os, random
-from data_loaders import load_dataset
+from data_loaders import load_dataset, VALID_REGIONS
 
 # import os, sys
 # from astropy.time import Time
@@ -29,7 +29,7 @@ parser = argparse.ArgumentParser(prog='Calculator of Edit Distances')
 parser.add_argument("--region",
         help="Region to analyze.",
         default="ja",
-        choices=["ja", "gr", "nz", "jma"])
+        choices=VALID_REGIONS)
 parser.add_argument("--minmag",
         help="Minimum magnitude.",
         type=float,
