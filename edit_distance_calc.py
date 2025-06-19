@@ -99,8 +99,9 @@ W = args.inputw
 PRED_WINDOW = args.outputw
 
 dayNumbers = data["day.number"] # To make things faster, save it in a variable
+maxDayNumber = (dt.datetime(2021, 8, 31) - dt.datetime(2000, 1, 1)).days + 1
 
-for i in range(W-1, max(dayNumbers) + 1 - PRED_WINDOW):
+for i in range(W-1, maxDayNumber + 1 - PRED_WINDOW):
     quakeWindow = data[ (dayNumbers > i - W) * (dayNumbers <= i) ]
     predWindow  = data[ (dayNumbers > i) * (dayNumbers <= i+PRED_WINDOW) ]
     allY_dayNumbers.append(i + 1)
