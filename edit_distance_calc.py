@@ -12,19 +12,6 @@ import time
 import argparse, sys, os, random
 from data_loaders import load_dataset, VALID_REGIONS
 
-# import os, sys
-# from astropy.time import Time
-# from astropy.coordinates import solar_system_ephemeris, EarthLocation
-# from astropy.coordinates import get_body_barycentric, get_body, get_moon, get_sun
-
-def pkldump(obj, file):
-    with open(file, "wb") as fp:
-        pickle.dump(obj, fp)
-
-def pklload(file):
-    with open(file, "rb") as fp:
-        return pickle.load(fp)
-
 parser = argparse.ArgumentParser(prog='Calculator of Edit Distances')
 parser.add_argument("--region",
         help="Region to analyze.",
@@ -77,6 +64,54 @@ EXPERIMENT_NAME = "-".join([
     f"tlambda{args.tlambda:.3g}"
 ])
 print(f"Experiment name: {EXPERIMENT_NAME}")
+
+
+def pkldump(obj, file):
+    with open(file, "wb") as fp:
+        pickle.dump(obj, fp)
+
+def pklload(file):
+    with open(file, "rb") as fp:
+        return pickle.load(fp)
+
+# Requires data1 and data2 given as matrices whose rows are
+#   in the form (timestamp, magnitude, m2, m3, ...)
+def editDistance(data1, data2, lambdas, lambdaDeletion=1):
+    if len(data1) == 0:
+        return len(data2)
+    elif len(data2) == 0:
+        return len(data1)
+    
+    allLen = len(data1) + len(data2)
+    
+    lambdas = np.asarray(lambdas)
+    data1 = np.asarray(data1)
+    data2 = np.asarray(data2)
+
+    M = np.zeros([allLen, allLen])
+    M[0:len(data1),0:len(data1)] = lambdaDeletion
+    M[len(data1):allLen,len(data1):allLen] = lambdaDeletion
+    
+#    M[0:len(data1),0:len(data1)] = np.inf
+#    M[len(data1):allLen,len(data1):allLen] = np.inf
+#    M[np.diag_indices(allLen)] = [ lambdaDeletion for i in range(allLen) ]
+
+    # Define shift costs
+    for i in range(len(data1)):
+        point1 = data1[i,:]
+
+        diffs = np.abs(data2 - point1)
+
+        # after this, diffs contain the c(i,j) for each j
+        diffs = diffs @ lambdas
+
+        M[i, len(data1):allLen] = diffs    
+
+    row_ind, col_ind = linear_sum_assignment(M)
+
+    return M[row_ind,col_ind].sum()
+
+
 
 data = load_dataset(args.region, args.minmag)
 
@@ -138,43 +173,6 @@ longitudeStd = slic["longitude"].std()
 baselineStds = [timeStd, magnitudeStd, longitudeStd, latitudeStd, depthStd]
 #baselineStds2 = [timeStd, magnitudeStd, (longitudeStd + latitudeStd) / 2, depthStd]
 
-# Requires data1 and data2 given as matrices whose rows are
-#   in the form (timestamp, magnitude, m2, m3, ...)
-def editDistance(data1, data2, lambdas, lambdaDeletion=1):
-    if len(data1) == 0:
-        return len(data2)
-    elif len(data2) == 0:
-        return len(data1)
-    
-    allLen = len(data1) + len(data2)
-    
-    lambdas = np.asarray(lambdas)
-    data1 = np.asarray(data1)
-    data2 = np.asarray(data2)
-
-    M = np.zeros([allLen, allLen])
-    M[0:len(data1),0:len(data1)] = lambdaDeletion
-    M[len(data1):allLen,len(data1):allLen] = lambdaDeletion
-    
-#    M[0:len(data1),0:len(data1)] = np.inf
-#    M[len(data1):allLen,len(data1):allLen] = np.inf
-#    M[np.diag_indices(allLen)] = [ lambdaDeletion for i in range(allLen) ]
-
-    # Define shift costs
-    for i in range(len(data1)):
-        point1 = data1[i,:]
-
-        diffs = np.abs(data2 - point1)
-
-        # after this, diffs contain the c(i,j) for each j
-        diffs = diffs @ lambdas
-
-        M[i, len(data1):allLen] = diffs    
-
-    row_ind, col_ind = linear_sum_assignment(M)
-
-    return M[row_ind,col_ind].sum()
-
 baselineLambdas = [ 1 / i for i in baselineStds ]
 #baselineLambdas2 = [ 1 / i for i in baselineStds2 ]
 
@@ -228,4 +226,5 @@ try:
     np.save(os.path.join(args.outdir, f"{EXPERIMENT_NAME}.npy"), distanceMatrix)
 except:
     # In that case, we save it in the current directory
+    print("Could not save in the specified folder. Saving to current folder instead.")
     np.save(os.path.join("./", f"{EXPERIMENT_NAME}.npy"), distanceMatrix)
