@@ -146,7 +146,8 @@ W = args.inputw
 PRED_WINDOW = args.outputw
 
 dayNumbers = data["day.number"] # To make things faster, save it in a variable
-maxDayNumber = (dt.datetime(2021, 8, 31) - dt.datetime(2000, 1, 1)).days + 1
+maxDayNumber = (dt.datetime(2021, 8, 31) - dt.datetime(2000, 1, 1)).days
+# NOTE: day.number of 2000/01/01 is 0, so we do not need to add 1 to maxDayNumber
 
 for i in range(W-1, maxDayNumber + 1 - PRED_WINDOW):
     quakeWindow = data[ (dayNumbers > i - W) * (dayNumbers <= i) ]
