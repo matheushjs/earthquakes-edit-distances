@@ -257,8 +257,8 @@ for i in range(N):
     distanceMatrix[i, (i+1):] = allDistances[i]
     distanceMatrix[(i+1):, i] = allDistances[i]
 
-if args.partial:
-    distanceMatrix = distanceMatrix[:,np.array([i for i in valid_idxs])]
+# if args.partial:
+#     distanceMatrix = distanceMatrix[:,np.array([i for i in valid_idxs])]
 
 try:
     # This might fail if the user choses an output directory that is in an external HD
