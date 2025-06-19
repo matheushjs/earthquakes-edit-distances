@@ -42,8 +42,16 @@ parser.add_argument("--outdir",
         type=str,
         default="./")
 parser.add_argument("--dry-run",
-        help="Calculate only a small portion of the edit distances" ,
+        help="Calculate only a small portion of the edit distances, just for testing." ,
         action='store_true')
+parser.add_argument("--partial",
+        help="Calculates edit distances to only some of the bases in the training set. " + \
+              "Specify the number of bases with --partial-n",
+        action='store_true')
+parser.add_argument("--partial-n",
+        help="When using --partial, the number of bases in the training set to consider.",
+        type=int,
+        default=500)
 args = parser.parse_args()
 
 if args.minmag < 0 and args.region == "jma":
@@ -55,16 +63,20 @@ for i, j in args._get_kwargs():
     print("{}: {}".format(i, j))
 print("==================")
 
-EXPERIMENT_NAME = "-".join([
+EXPERIMENT_NAME = [
     f"distance-matrix",
     f"{args.region}",
     f"minmag{args.minmag}",
     f"inputw{args.inputw}",
     f"outputw{args.outputw}",
     f"tlambda{args.tlambda:.3g}"
-])
+]
+if args.dry_run:
+    EXPERIMENT_NAME += ["dryrun"]
+if args.partial:
+    EXPERIMENT_NAME += [f"partial{args.partial_n}"]
+EXPERIMENT_NAME = "-".join(EXPERIMENT_NAME)
 print(f"Experiment name: {EXPERIMENT_NAME}")
-
 
 def pkldump(obj, file):
     with open(file, "wb") as fp:
@@ -195,6 +207,34 @@ def calculateDistances(idx):
     
     return distances
 
+if args.partial:
+    valid_idxs = random.sample(range(len(allX_quakes) // 2), k=args.partial_n)
+    print(sorted(valid_idxs))
+    valid_idxs = set(valid_idxs)
+else:
+    valid_idxs = set(range(len(allX_quakes)))
+
+def calculateDistances2(idx):
+    if idx % 50 == 0:
+        print(idx, end=" ")
+
+    N = len(allX_quakes)
+    distances = []
+
+    myX = allX_quakes[idx]
+
+    for i in range(idx+1, N):
+        theirX = allX_quakes[i]
+        if args.dry_run and random.random() > 0.00005:
+            distances.append(-1)
+        elif idx in valid_idxs or i in valid_idxs:
+            distances.append(editDistance(myX, theirX, baselineLambdas))
+        else:
+            distances.append(-1)
+        #distances.append(editDistance2(myX, theirX, baselineLambdas2))
+    
+    return distances
+
 # allDistances = [ calculateDistances(i) for i in range(len(allX_quakes)) ]
 
 try:
@@ -208,7 +248,7 @@ beg = time.time()
 
 print("Beginning multiprocessed calculation.")
 with mp.Pool(args.nthreads) as p:
-    allDistances = p.map(calculateDistances, list(range(len(allX_quakes))), chunksize=1)
+    allDistances = p.map(calculateDistances2, list(range(len(allX_quakes))), chunksize=1)
 
 end = time.time()
 print("Elapsed: ", end - beg)
@@ -220,6 +260,9 @@ distanceMatrix = np.zeros([N, N])
 for i in range(N):
     distanceMatrix[i, (i+1):] = allDistances[i]
     distanceMatrix[(i+1):, i] = allDistances[i]
+
+if args.partial:
+    distanceMatrix = distanceMatrix[:,np.array([i for i in valid_idxs])]
 
 try:
     # This might fail if the user choses an output directory that is in an external HD
