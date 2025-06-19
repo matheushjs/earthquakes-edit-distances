@@ -77,26 +77,11 @@ print(f"Experiment name: {EXPERIMENT_NAME}")
 
 data = load_dataset(args.region, args.minmag)
 
-ss = pd.read_csv("../sunspots.csv")
-
-ss = ss[ss["year"] >= 2000].copy()
-initDate = dt.datetime(2000, 1, 1)
-newCol = []
-
-for i in range(len(ss)):
-    datum = ss.iloc[i,:]
-    dateObj = dt.datetime(datum["year"], datum["month"], datum["day"])
-    ndays = (dateObj - initDate).days
-    
-    newCol.append(ndays)
-
-ss["day.number"] = newCol
 
 allX_quakes = []
 allX_maxMag = []
 allX_meanMag = []
 allX_logN = []
-allX_sunspots = []
 
 allX_quakes_N = []
 allX_quakes_logN = []
@@ -111,17 +96,12 @@ W = args.inputw
 PRED_WINDOW = args.outputw
 
 dayNumbers = data["day.number"] # To make things faster, save it in a variable
-ssDayNumbers = ss["day.number"]
 
 for i in range(W-1, max(dayNumbers) + 1 - PRED_WINDOW):
     quakeWindow = data[ (dayNumbers > i - W) * (dayNumbers <= i) ]
     predWindow  = data[ (dayNumbers > i) * (dayNumbers <= i+PRED_WINDOW) ]
-    #predWindow  = nankaiData[ (nankaiData["day.number"] > i) * (nankaiData["day.number"] <= i+PRED_WINDOW) ]
     allY_dayNumbers.append(i + 1)
-    
-    ssWindow    = ss[ (ssDayNumbers > i - W) * (ssDayNumbers <= i) ]
-    allX_sunspots.append(list(ssWindow["ssn (count)"]))
-    
+
     if len(quakeWindow) > 0:
         quakeSequence = np.array(quakeWindow[["time.seconds", "magnitude", "longitude", "latitude", "depth"]])
         quakeSequence[:,0] = quakeSequence[:,0] - (i-W+1) * 24 * 60 * 60
@@ -143,29 +123,16 @@ for i in range(W-1, max(dayNumbers) + 1 - PRED_WINDOW):
     allX_quakes_logN.append(np.log(len(quakeSequence) + 1))
 
 
-allX_sunspots = np.array(allX_sunspots)
-
-N = allX_sunspots.shape[0]
-ssDistanceMatrix = np.zeros([N, N])
-
-for i in range(N):
-    squares = (allX_sunspots[i] - allX_sunspots)**2
-    rowSums = np.sum(squares, axis=1)
-    
-    ssDistanceMatrix[i,:] = np.sqrt(rowSums)
-
-
 slic = data[data["year"] < 2011]
 
-timeStd = np.std(np.diff(slic["time.seconds"])) * args.tlambda
+timeStd      = np.std(np.diff(slic["time.seconds"])) * args.tlambda
 magnitudeStd = slic["magnitude"].std()
 depthStd     = slic["depth"].std()
 latitudeStd  = slic["latitude"].std()
 longitudeStd = slic["longitude"].std()
 
 baselineStds = [timeStd, magnitudeStd, longitudeStd, latitudeStd, depthStd]
-baselineStds2 = [timeStd, magnitudeStd, (longitudeStd + latitudeStd) / 2, depthStd]
-
+#baselineStds2 = [timeStd, magnitudeStd, (longitudeStd + latitudeStd) / 2, depthStd]
 
 # Requires data1 and data2 given as matrices whose rows are
 #   in the form (timestamp, magnitude, m2, m3, ...)
@@ -176,8 +143,6 @@ def editDistance(data1, data2, lambdas, lambdaDeletion=1):
         return len(data1)
     
     allLen = len(data1) + len(data2)
-
-    #print("{}-{}-{}".format(len(data1), len(data2), allLen), end="\t")
     
     lambdas = np.asarray(lambdas)
     data1 = np.asarray(data1)
@@ -186,8 +151,6 @@ def editDistance(data1, data2, lambdas, lambdaDeletion=1):
     M = np.zeros([allLen, allLen])
     M[0:len(data1),0:len(data1)] = lambdaDeletion
     M[len(data1):allLen,len(data1):allLen] = lambdaDeletion
-
-    #print(M.shape)
     
 #    M[0:len(data1),0:len(data1)] = np.inf
 #    M[len(data1):allLen,len(data1):allLen] = np.inf
@@ -196,23 +159,20 @@ def editDistance(data1, data2, lambdas, lambdaDeletion=1):
     # Define shift costs
     for i in range(len(data1)):
         point1 = data1[i,:]
-        
+
         diffs = np.abs(data2 - point1)
-        
+
         # after this, diffs contain the c(i,j) for each j
         diffs = diffs @ lambdas
-        
+
         M[i, len(data1):allLen] = diffs    
-    
+
     row_ind, col_ind = linear_sum_assignment(M)
-    
-    #print(M)
-    
+
     return M[row_ind,col_ind].sum()
 
-
 baselineLambdas = [ 1 / i for i in baselineStds ]
-baselineLambdas2 = [ 1 / i for i in baselineStds2 ]
+#baselineLambdas2 = [ 1 / i for i in baselineStds2 ]
 
 def calculateDistances(idx):
     if idx % 50 == 0:
@@ -224,13 +184,11 @@ def calculateDistances(idx):
     myX = allX_quakes[idx]
     
     for i in range(idx+1, N):
-        #print(i, sep=" ")
         theirX = allX_quakes[i]
         distances.append(editDistance(myX, theirX, baselineLambdas))
         #distances.append(editDistance2(myX, theirX, baselineLambdas2))
     
     return distances
-
 
 # allDistances = [ calculateDistances(i) for i in range(len(allX_quakes)) ]
 
@@ -239,7 +197,7 @@ try:
 except Exception: pass
 
 # Deleting some variables here to minimize memory usage by child processes
-del data, slic, ss, ssDistanceMatrix
+del data, slic
 
 beg = time.time()
 
