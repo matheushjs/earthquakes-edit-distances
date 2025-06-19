@@ -267,8 +267,16 @@ if args.partial:
 
 try:
     # This might fail if the user choses an output directory that is in an external HD
-    np.save(os.path.join(args.outdir, f"{EXPERIMENT_NAME}.npy"), distanceMatrix)
+    fname = os.path.join(args.outdir, f"{EXPERIMENT_NAME}.npy")
+    if os.path.exists(fname):
+        print("File already exists! Will preprend a random identifier to it.")
+        fname = os.path.join(args.outdir, f"{EXPERIMENT_NAME}-{os.urandom(4).hex()}.npy")
+    np.save(fname, distanceMatrix)
 except:
     # In that case, we save it in the current directory
     print("Could not save in the specified folder. Saving to current folder instead.")
-    np.save(os.path.join("./", f"{EXPERIMENT_NAME}.npy"), distanceMatrix)
+    fname = os.path.join("./", f"{EXPERIMENT_NAME}.npy")
+    if os.path.exists(fname):
+        print("File already exists! Will preprend a random identifier to it.")
+        fname = os.path.join("./", f"{EXPERIMENT_NAME}-{os.urandom(4).hex()}.npy")
+    np.save(fname, distanceMatrix)
