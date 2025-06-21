@@ -43,8 +43,8 @@ def load_dataset(region, minmag=0):
         "stil": "../greece.csv",
         "nz": "../newzealand.csv",
         "well": "../newzealand.csv",
-        "jma": "../jma-japan-earthquakes-mag2.csv",
-        "jmatoho": "../jma-japan-earthquakes-mag2.csv"
+        "jma": "../jma-japan-earthquakes-mag2-dayNumbers.csv",
+        "jmatoho": "../jma-japan-earthquakes-mag2-dayNumbers.csv"
     }
 
     data = pd.read_csv(regionToDatafile[region])
@@ -56,7 +56,7 @@ def load_dataset(region, minmag=0):
     data = data.query("year <= 2021").query("year < 2021 or month < 9")
     data = data.copy().reset_index(drop=True) # Ensures we are not working with a pandas slice
 
-    data = add_time_columns(data)
+    #data = add_time_columns(data)
 
     if region == "toho" or region == "jmatoho":
         points = data[["longitude", "latitude"]].copy()
