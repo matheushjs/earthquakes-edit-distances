@@ -12,6 +12,9 @@ import time
 import argparse, sys, os, random
 from data_loaders import load_dataset, VALID_REGIONS
 
+# Stride of the multiprocessed calculation
+STRIDE=1000
+
 parser = argparse.ArgumentParser(prog='Calculator of Edit Distances')
 parser.add_argument("--region",
         help="Region to analyze.",
@@ -211,20 +214,33 @@ else:
     valid_idxs = set(range(len(allX_quakes)))
 
 def calculateDistances2(idx):
-    if idx % 50 == 0:
-        print(idx, end=" ")
-
     N = len(allX_quakes)
+
+    if idx % (STRIDE*500) == 0:
+        print(f"{idx / STRIDE / (N*N / STRIDE):.2f}", end=" ")
+
     distances = []
 
-    myX = allX_quakes[idx]
+    for i in range(idx, idx+STRIDE):
+        idx_i = i // N
+        idx_j = i % N
 
-    for i in range(idx+1, N):
-        theirX = allX_quakes[i]
+        if i >= N*N:
+            break
+
+        if idx_i >= idx_j:
+            # We make it zero so we can complete the matrix later
+            # By simply adding the transpose to itself
+            distances.append(0)
+            continue
+    
+        myX    = allX_quakes[idx_i]
+        theirX = allX_quakes[idx_j]
         if args.dry_run and random.random() > 0.00005:
             distances.append(-1)
-        elif idx in valid_idxs or i in valid_idxs:
+        elif idx_i in valid_idxs or idx_j in valid_idxs:
             distances.append(editDistance(myX, theirX, baselineLambdas))
+            #distances.append(idx_j)
         else:
             distances.append(-1)
         #distances.append(editDistance2(myX, theirX, baselineLambdas2))
@@ -244,18 +260,23 @@ beg = time.time()
 
 print("Beginning multiprocessed calculation.")
 with mp.Pool(args.nthreads) as p:
-    allDistances = p.map(calculateDistances2, list(range(len(allX_quakes))), chunksize=1)
+    allDistances = p.map(calculateDistances2, list(range(0,len(allX_quakes)**2,STRIDE)), chunksize=1)
 
 end = time.time()
 print("Elapsed: ", end - beg)
 
 N = len(allX_quakes)
 
-distanceMatrix = np.zeros([N, N])
+distanceMatrix = np.zeros(N**2)
 
-for i in range(N):
-    distanceMatrix[i, (i+1):] = allDistances[i]
-    distanceMatrix[(i+1):, i] = allDistances[i]
+for i, distances in zip(list(range(0,len(allX_quakes)**2,STRIDE)), allDistances):
+    if len(distances) == STRIDE:
+        distanceMatrix[i:(i+STRIDE)] = distances
+    else:
+        distanceMatrix[i:] = distances
+
+distanceMatrix = distanceMatrix.reshape(N, N)
+distanceMatrix = distanceMatrix + distanceMatrix.T # Complete the lower triangle
 
 # if args.partial:
 #     distanceMatrix = distanceMatrix[:,np.array([i for i in valid_idxs])]
