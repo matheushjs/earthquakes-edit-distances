@@ -75,3 +75,62 @@ def load_dataset(region, minmag=0):
         data = data[idx].copy().reset_index(drop=True)
     
     return data
+
+class EQTimeWindows:
+    def __init__(self, data, inputw=7, outputw=1):
+        try:
+            for col in ["day.number", "magnitude", "latitude", "longitude", "depth", "time.seconds"]:
+                data[col]
+        except:
+            raise Exception("Dataframe does not have the required columns.")
+        
+        self.inputw = inputw
+        self.outputw = outputw
+        self.data = data
+
+        # prefix 'x' means the variable refers to the X space, the independent variable space (the previous time windows)
+        # prefix 'y' means the dependent variable Y space, often the next-window features
+        self.x_quakes  = []
+        self.x_maxMag  = []
+        self.x_meanMag = []
+        self.x_logN    = []
+
+        self.x_quakes_N    = []
+        self.x_quakes_logN = []
+        #allX_seismicity = []
+
+        self.y_dayNumbers = []
+
+        # Window size
+        W = inputw
+
+        # Prediction window
+        PRED_WINDOW = outputw
+
+        dayNumbers = data["day.number"] # To make things faster, save it in a variable
+        maxDayNumber = (dt.datetime(2021, 8, 31) - dt.datetime(2000, 1, 1)).days
+        # NOTE: day.number of 2000/01/01 is 0, so we do not need to add 1 to maxDayNumber
+
+        for i in range(W-1, maxDayNumber + 1 - PRED_WINDOW):
+            quakeWindow = data[ (dayNumbers > i - W) * (dayNumbers <= i) ]
+            predWindow  = data[ (dayNumbers > i) * (dayNumbers <= i+PRED_WINDOW) ]
+            self.y_dayNumbers.append(i + 1)
+
+            if len(quakeWindow) > 0:
+                quakeSequence = np.array(quakeWindow[["time.seconds", "magnitude", "longitude", "latitude", "depth"]])
+                quakeSequence[:,0] = quakeSequence[:,0] - (i-W+1) * 24 * 60 * 60
+            else:
+                quakeSequence = np.array([])
+
+            if len(predWindow) > 0:
+                self.x_maxMag.append(predWindow["magnitude"].max())
+                self.x_meanMag.append(predWindow["magnitude"].mean())
+            else:
+                self.x_maxMag.append(0)
+                self.x_meanMag.append(0)
+
+            self.x_quakes.append(quakeSequence)
+            self.x_logN.append(np.log(len(predWindow) + 1)) #variable to predict
+
+            self.x_quakes_N.append(len(quakeSequence))
+            self.x_quakes_logN.append(np.log(len(quakeSequence) + 1))
