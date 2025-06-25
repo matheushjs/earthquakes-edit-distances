@@ -258,9 +258,11 @@ del data, slic
 
 beg = time.time()
 
+allArgs = list(range(0,len(allX_quakes)**2,STRIDE))
+
 print("Beginning multiprocessed calculation.")
 with mp.Pool(args.nthreads) as p:
-    allDistances = p.map(calculateDistances2, list(range(0,len(allX_quakes)**2,STRIDE)), chunksize=1)
+    allDistances = p.map(calculateDistances2, allArgs, chunksize=1)
 
 end = time.time()
 print("Elapsed: ", end - beg)
@@ -269,7 +271,7 @@ N = len(allX_quakes)
 
 distanceMatrix = np.zeros(N**2)
 
-for i, distances in zip(list(range(0,len(allX_quakes)**2,STRIDE)), allDistances):
+for i, distances in zip(allArgs, allDistances):
     if len(distances) == STRIDE:
         distanceMatrix[i:(i+STRIDE)] = distances
     else:
