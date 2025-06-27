@@ -12,8 +12,8 @@ import time
 import argparse, sys, os, random
 from data_loaders import load_dataset, VALID_REGIONS
 
-# Stride of the multiprocessed calculation
-STRIDE=1000
+STRIDE=1000 # Stride of the multiprocessed calculation
+RANDOMIZE_ARGS = True # Whether to calculate edit distances in a randomized way
 
 parser = argparse.ArgumentParser(prog='Calculator of Edit Distances')
 parser.add_argument("--region",
@@ -256,16 +256,27 @@ except Exception: pass
 # Deleting some variables here to minimize memory usage by child processes
 del data, slic
 
-beg = time.time()
-
 allArgs = list(range(0,len(allX_quakes)**2,STRIDE))
 
+if RANDOMIZE_ARGS:
+    allArgs_idxRand = list(range(len(allArgs))) 
+    np.random.shuffle(allArgs_idxRand) # 4 2 0 3 1
+    allArgs_idxRand_inv = np.zeros(len(allArgs), dtype=int)
+    for i in range(len(allArgs)):
+        allArgs_idxRand_inv[allArgs_idxRand[i]] = i  # 2 4 1 3 0
+    
+    allArgs = [ allArgs[i] for i in allArgs_idxRand ]
+
+beg = time.time()
 print("Beginning multiprocessed calculation.")
 with mp.Pool(args.nthreads) as p:
     allDistances = p.map(calculateDistances2, allArgs, chunksize=1)
-
 end = time.time()
 print("Elapsed: ", end - beg)
+
+if RANDOMIZE_ARGS:
+    allArgs      = [ allArgs[i] for i in allArgs_idxRand_inv ]
+    allDistances = [ allDistances[i] for i in allArgs_idxRand_inv ]
 
 N = len(allX_quakes)
 
