@@ -47,6 +47,9 @@ parser.add_argument("--outdir",
 parser.add_argument("--dry-run",
         help="Calculate only a small portion of the edit distances, just for testing." ,
         action='store_true')
+parser.add_argument("--dummy-dists",
+        help="Do not calculate edit distances. Used for testing correctness of the code." ,
+        action='store_true')
 parser.add_argument("--partial",
         help="Calculates edit distances to only some of the bases in the training set. " + \
               "Specify the number of bases with --partial-n",
@@ -56,6 +59,10 @@ parser.add_argument("--partial-n",
         type=int,
         default=500)
 args = parser.parse_args()
+
+if args.dry_run and args.dummy_dists or args.partial and args.dummy_dists:
+    print("Cannot use --dummy-dists with --dry-run or --partial.")
+    sys.exit(1)
 
 print("Beginning program.")
 print("Command executed: {}".format(' '.join(sys.argv)))
@@ -75,6 +82,8 @@ if args.dry_run:
     EXPERIMENT_NAME += ["dryrun"]
 if args.partial:
     EXPERIMENT_NAME += [f"partial{args.partial_n}"]
+if args.dummy_dists:
+    EXPERIMENT_NAME += ["dummydists"]
 EXPERIMENT_NAME = "-".join(EXPERIMENT_NAME)
 print(f"Experiment name: {EXPERIMENT_NAME}")
 
