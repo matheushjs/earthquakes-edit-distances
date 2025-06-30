@@ -210,7 +210,7 @@ def calculateDistances(idx):
         if args.dry_run and random.random() > 0.00005:
             distances.append(-1)
         else:
-            distances.append(editDistance(myX, theirX, baselineLambdas))
+            distances.append(editDistance(myX, theirX, baselineLambdas) if not args.dummy_dists else float(idx*10000 + i) )
         #distances.append(editDistance2(myX, theirX, baselineLambdas2))
     
     return distances
@@ -248,7 +248,7 @@ def calculateDistances2(idx):
         if args.dry_run and random.random() > 0.00005:
             distances.append(-1)
         elif idx_i in valid_idxs or idx_j in valid_idxs:
-            distances.append(editDistance(myX, theirX, baselineLambdas))
+            distances.append(editDistance(myX, theirX, baselineLambdas) if not args.dummy_dists else float(idx_i*10000 + idx_j) )
             #distances.append(idx_j)
         else:
             distances.append(-1)
@@ -299,6 +299,17 @@ for i, distances in zip(allArgs, allDistances):
 
 distanceMatrix = distanceMatrix.reshape(N, N)
 distanceMatrix = distanceMatrix + distanceMatrix.T # Complete the lower triangle
+
+if args.dummy_dists:
+    correctMat = np.array([ [ j*10000 + i for i in range(N) ] for j in range(N) ])
+    correctMat[np.tril_indices(N)] = 0
+    correctMat[np.diag_indices(N)] = 0
+    correctMat = correctMat + correctMat.T
+    
+    if np.all(correctMat == distanceMatrix):
+        print("Distance matrix was filled correctly.")
+    else:
+        print("ERROR: Distance matrix was NOT filled correctly.")
 
 # if args.partial:
 #     distanceMatrix = distanceMatrix[:,np.array([i for i in valid_idxs])]
