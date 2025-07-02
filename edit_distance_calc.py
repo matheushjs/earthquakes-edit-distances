@@ -6,6 +6,7 @@ from scipy.spatial import distance_matrix
 import pickle
 import datetime as dt
 import copy
+import tqdm
 import seaborn as sns
 import multiprocessing as mp
 import time
@@ -279,7 +280,8 @@ if RANDOMIZE_ARGS:
 beg = time.time()
 print("Beginning multiprocessed calculation.")
 with mp.Pool(args.nthreads) as p:
-    allDistances = p.map(calculateDistances2, allArgs, chunksize=1)
+    #allDistances = p.map(calculateDistances2, allArgs, chunksize=1)
+    allDistances = list(tqdm.tqdm(p.imap(calculateDistances2, allArgs, chunksize=1), total=len(allArgs)))
 end = time.time()
 print("Elapsed: ", end - beg)
 
