@@ -226,8 +226,8 @@ else:
 def calculateDistances2(idx):
     N = len(allX_quakes)
 
-    if idx % (STRIDE*500) == 0:
-        print(f"{idx / STRIDE / (N*N / STRIDE):.2f}", end=" ")
+    #if idx % (STRIDE*500) == 0:
+    #    print(f"{idx / STRIDE / (N*N / STRIDE):.2f}", end=" ")
 
     distances = []
 
