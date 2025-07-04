@@ -255,7 +255,7 @@ def calculateDistances2(idx):
             distances.append(-1)
         #distances.append(editDistance2(myX, theirX, baselineLambdas2))
     
-    return distances
+    return idx, distances
 
 # allDistances = [ calculateDistances(i) for i in range(len(allX_quakes)) ]
 
@@ -281,19 +281,20 @@ beg = time.time()
 print("Beginning multiprocessed calculation.")
 with mp.Pool(args.nthreads) as p:
     #allDistances = p.map(calculateDistances2, allArgs, chunksize=1)
-    allDistances = list(tqdm.tqdm(p.imap(calculateDistances2, allArgs, chunksize=1), total=len(allArgs)))
+    allDistances = list(tqdm.tqdm(p.imap_unordered(calculateDistances2, allArgs, chunksize=1), total=len(allArgs)))
 end = time.time()
 print("Elapsed: ", end - beg)
 
-if RANDOMIZE_ARGS:
-    allArgs      = [ allArgs[i] for i in allArgs_idxRand_inv ]
-    allDistances = [ allDistances[i] for i in allArgs_idxRand_inv ]
+# if RANDOMIZE_ARGS:
+#     allArgs      = [ allArgs[i] for i in allArgs_idxRand_inv ]
+#     allDistances = [ allDistances[i] for i in allArgs_idxRand_inv ]
 
 N = len(allX_quakes)
 
 distanceMatrix = np.zeros(N**2)
 
-for i, distances in zip(allArgs, allDistances):
+# for i, distances in zip(allArgs, allDistances):
+for i, distances in allDistances:
     if len(distances) == STRIDE:
         distanceMatrix[i:(i+STRIDE)] = distances
     else:
