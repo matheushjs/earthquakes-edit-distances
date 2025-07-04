@@ -77,7 +77,7 @@ EXPERIMENT_NAME = [
     f"minmag{args.minmag}",
     f"inputw{args.inputw}",
     f"outputw{args.outputw}",
-    f"tlambda{args.tlambda:.3g}"
+    f"tlambda{np.format_float_positional(args.tlambda, trim="-")}"
 ]
 if args.dry_run:
     EXPERIMENT_NAME += ["dryrun"]
