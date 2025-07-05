@@ -13,7 +13,7 @@ import time
 import argparse, sys, os, random
 from data_loaders import load_dataset, VALID_REGIONS
 
-STRIDE=1000 # Stride of the multiprocessed calculation
+STRIDE=250 # Stride of the multiprocessed calculation
 RANDOMIZE_ARGS = True # Whether to calculate edit distances in a randomized way
 
 parser = argparse.ArgumentParser(prog='Calculator of Edit Distances')
