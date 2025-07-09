@@ -51,6 +51,9 @@ parser.add_argument("--dry-run",
 parser.add_argument("--dummy-dists",
         help="Do not calculate edit distances. Used for testing correctness of the code." ,
         action='store_true')
+parser.add_argument("--calc-time",
+        help="Return a matrix of execution times, rather than edit distances." ,
+        action='store_true')
 parser.add_argument("--partial",
         help="Calculates edit distances to only some of the bases in the training set. " + \
               "Specify the number of bases with --partial-n",
@@ -85,6 +88,8 @@ if args.partial:
     EXPERIMENT_NAME += [f"partial{args.partial_n}"]
 if args.dummy_dists:
     EXPERIMENT_NAME += ["dummydists"]
+if args.calc_time:
+    EXPERIMENT_NAME += ["times"]
 EXPERIMENT_NAME = "-".join(EXPERIMENT_NAME)
 print(f"Experiment name: {EXPERIMENT_NAME}")
 
@@ -100,9 +105,9 @@ def pklload(file):
 #   in the form (timestamp, magnitude, m2, m3, ...)
 def editDistance(data1, data2, lambdas, lambdaDeletion=1):
     if len(data1) == 0:
-        return len(data2)
+        return len(data2) if not args.calc_time else 0.0
     elif len(data2) == 0:
-        return len(data1)
+        return len(data1) if not args.calc_time else 0.0
     
     allLen = len(data1) + len(data2)
     
@@ -119,6 +124,7 @@ def editDistance(data1, data2, lambdas, lambdaDeletion=1):
 #    M[np.diag_indices(allLen)] = [ lambdaDeletion for i in range(allLen) ]
 
     # Define shift costs
+    timer = time.time()
     for i in range(len(data1)):
         point1 = data1[i,:]
 
@@ -130,6 +136,10 @@ def editDistance(data1, data2, lambdas, lambdaDeletion=1):
         M[i, len(data1):allLen] = diffs    
 
     row_ind, col_ind = linear_sum_assignment(M)
+    elapsed = time.time() - timer
+
+    if args.calc_time:
+        return elapsed
 
     return M[row_ind,col_ind].sum()
 
