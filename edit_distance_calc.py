@@ -291,7 +291,7 @@ beg = time.time()
 print("Beginning multiprocessed calculation.")
 with mp.Pool(args.nthreads) as p:
     #allDistances = p.map(calculateDistances2, allArgs, chunksize=1)
-    allDistances = list(tqdm.tqdm(p.imap_unordered(calculateDistances2, allArgs, chunksize=1), total=len(allArgs), smoothing=0))
+    allDistances = list(tqdm.tqdm(p.imap_unordered(calculateDistances2, allArgs, chunksize=1), total=len(allArgs), smoothing=0.1))
 end = time.time()
 print("Elapsed: ", end - beg)
 
