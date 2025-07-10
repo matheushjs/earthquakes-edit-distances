@@ -1,9 +1,19 @@
 import numpy as np
 import pandas as pd
 import datetime as dt
+import pickle
 import time
 
 VALID_REGIONS = ["ja", "gr", "nz", "jma", "toho", "well", "stil", "jmatoho"]
+VALID_CLUSTER_REGIONS = ["ja", "nz"]
+
+def pkldump(obj, file):
+    with open(file, "wb") as fp:
+        pickle.dump(obj, fp)
+
+def pklload(file):
+    with open(file, "rb") as fp:
+        return pickle.load(fp)
 
 def add_time_columns(data):
     initDate = dt.datetime(2000, 1, 1)
@@ -73,6 +83,26 @@ def load_dataset(region, minmag=0):
         centroid = np.array([21.25, 37.5])
         idx = np.sqrt(np.sum((points - centroid)**2, axis=1)) < 2
         data = data[idx].copy().reset_index(drop=True)
+    
+    return data
+
+def load_cluster_dataset(region, minmag=0):
+    if region not in VALID_CLUSTER_REGIONS:
+        raise Exception(f"Invalid region: {region}.")
+
+    regionToDatafile = {
+        "ja": "../japan-clusterized-dataframes.pickle",
+        "nz": "../newzealand-clusterized-dataframes.pickle"
+    }
+
+    data = pklload(regionToDatafile[region])
+
+    for i in range(len(data)):
+        d = data[i]
+        d = d[d["magnitude"] >= minmag]
+        d = d.query("year <= 2021").query("year < 2021 or month < 9")
+        d = d.copy().reset_index(drop=True) # Ensures we are not working with a pandas slice
+        data[i] = d
     
     return data
 
