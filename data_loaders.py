@@ -164,3 +164,15 @@ class EQTimeWindows:
 
             self.x_quakes_N.append(len(quakeSequence))
             self.x_quakes_logN.append(np.log(len(quakeSequence) + 1))
+
+    def getBaselineStds(self, tlambda):
+        df = self.data
+        slic = df[df["year"] < 2011]
+
+        timeStd      = np.std(np.diff(slic["time.seconds"])) * args.tlambda
+        magnitudeStd = df["magnitude"].std()
+        depthStd     = df["depth"].std()
+        latitudeStd  = df["latitude"].std()
+        longitudeStd = df["longitude"].std()
+
+        return [timeStd, magnitudeStd, longitudeStd, latitudeStd, depthStd]
