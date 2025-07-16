@@ -169,7 +169,7 @@ class EQTimeWindows:
         df = self.data
         slic = df[df["year"] < 2011]
 
-        timeStd      = np.std(np.diff(slic["time.seconds"])) * args.tlambda
+        timeStd      = np.std(np.diff(slic["time.seconds"])) * tlambda
         magnitudeStd = df["magnitude"].std()
         depthStd     = df["depth"].std()
         latitudeStd  = df["latitude"].std()
