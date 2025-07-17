@@ -100,7 +100,7 @@ def load_cluster_dataset(region, minmag=0):
     for i in range(len(data)):
         d = data[i]
         d = d[d["magnitude"] >= minmag]
-        d = d.query("year <= 2021").query("year < 2021 or month < 9")
+        d = d.query("`day.number` < 7914") #d.query("year <= 2021").query("year < 2021 or month < 9")
         d = d.copy().reset_index(drop=True) # Ensures we are not working with a pandas slice
         data[i] = d
     
@@ -167,7 +167,7 @@ class EQTimeWindows:
 
     def getBaselineStds(self, tlambda):
         df = self.data
-        slic = df[df["year"] < 2011]
+        slic = df[df["day.number"] < 4018] # "year" < 2011
 
         timeStd      = np.std(np.diff(slic["time.seconds"])) * tlambda
         magnitudeStd = df["magnitude"].std()
