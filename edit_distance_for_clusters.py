@@ -176,7 +176,8 @@ for df in data:
     else:
         valid_idxs = set(range(len(eqtw.x_quakes)))
 
-    calculateDistances_d = lambda idx: calculateDistances(idx, eqtw.x_quakes)
+    def calculateDistances_d(idx):
+        return calculateDistances(idx, eqtw.x_quakes, valid_idxs)
 
     # allDistances = [ calculateDistances(i) for i in range(len(allX_quakes)) ]
 
