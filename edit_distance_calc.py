@@ -97,6 +97,8 @@ if args.dummy_dists:
     EXPERIMENT_NAME += ["dummydists"]
 if args.calc_time:
     EXPERIMENT_NAME += ["times"]
+if args.limit_windows:
+    EXPERIMENT_NAME += [f"lwindows{args.limit_windows_p}"]
 EXPERIMENT_NAME = "-".join(EXPERIMENT_NAME)
 print(f"Experiment name: {EXPERIMENT_NAME}")
 
