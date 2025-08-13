@@ -62,6 +62,13 @@ parser.add_argument("--partial-n",
         help="When using --partial, the number of bases in the training set to consider.",
         type=int,
         default=500)
+parser.add_argument("--limit-windows",
+        help="Limits the number of earthquakes in each window to the X-percentile of the window sizes distribution.",
+        action='store_true')
+parser.add_argument("--limit-windows-p",
+        help="Percentile to which window sizes should be truncated to.",
+        type=float,
+        default=0.8)
 args = parser.parse_args()
 
 if args.dry_run and args.dummy_dists or args.partial and args.dummy_dists:
