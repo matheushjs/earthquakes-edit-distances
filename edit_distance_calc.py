@@ -216,6 +216,17 @@ baselineStds = [timeStd, magnitudeStd, longitudeStd, latitudeStd, depthStd]
 baselineLambdas = [ 1 / i for i in baselineStds ]
 #baselineLambdas2 = [ 1 / i for i in baselineStds2 ]
 
+if args.limit_windows:
+    allSizes = [ len(i) for i in allX_quakes ]
+    lim = int(np.quantile(allSizes, args.limit_windows_p))
+    
+    print(f"Limiting window sizes to {lim}")
+    print("\tPrinting all deciles.")
+    print("\t" + " ".join( f"{int(i*100):3d}%" for i in np.linspace(0, 1, 11)) )
+    print("\t" + " ".join( f"{int(i):4d}" for i in np.quantile(allSizes, np.linspace(0, 1, 11))) )
+
+    allX_quakes = [ sorted(window, key=lambda i: i[1])[-lim:] for window in allX_quakes ]
+
 def calculateDistances(idx):
     if idx % 50 == 0:
         print(idx, end=" ")
