@@ -35,6 +35,10 @@ parser.add_argument("--limit-windows-p",
         help="Percentile to which window sizes should be truncated to.",
         type=float,
         default=0.8)
+parser.add_argument("--dir",
+        help="Read distance matrix from this directory.",
+        type=str,
+        default="./")
 args = parser.parse_args()
 
 print("Beginning program.")
