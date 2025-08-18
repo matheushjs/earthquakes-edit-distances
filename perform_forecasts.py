@@ -59,3 +59,16 @@ EXPERIMENT_NAME = [
 #     EXPERIMENT_NAME += [f"partial{args.partial_n}"]
 EXPERIMENT_NAME = "-".join(EXPERIMENT_NAME)
 print(f"Experiment name: {EXPERIMENT_NAME}")
+
+def pkldump(obj, file):
+    with open(file, "wb") as fp:
+        pickle.dump(obj, fp)
+
+def pklload(file):
+    with open(file, "rb") as fp:
+        return pickle.load(fp)
+
+fname = os.path.join(args.dir, f"{EXPERIMENT_NAME}.npy")
+distanceMatrix = np.load(fname)
+
+print(distanceMatrix)
