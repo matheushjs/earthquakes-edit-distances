@@ -5,7 +5,7 @@ import pickle
 import datetime as dt
 import seaborn as sns
 import argparse, sys, os, random
-from data_loaders import load_dataset, VALID_REGIONS
+from data_loaders import load_dataset, VALID_REGIONS, EQTimeWindows
 
 parser = argparse.ArgumentParser(prog='Calculates accuracy of prediction.')
 parser.add_argument("--region",
@@ -68,7 +68,12 @@ def pklload(file):
     with open(file, "rb") as fp:
         return pickle.load(fp)
 
+data = load_dataset(args.region, args.minmag)
+eqtw = EQTimeWindows(data, args.inputw, args.outputw)
+x_maxMag = eqtw.x_maxMag
+
 fname = os.path.join(args.dir, f"{EXPERIMENT_NAME}.npy")
 distanceMatrix = np.load(fname)
 
+print(x_maxMag)
 print(distanceMatrix)
