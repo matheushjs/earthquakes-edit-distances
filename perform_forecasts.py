@@ -95,14 +95,14 @@ def rbfPredict(y, distMat, trainSize, eps):
     
     return predicted, y[trainSize:]
 
-def getExperiments(distMat, all_predictor, all_expected, eps, trainSize, numIter=100, numBases=100):
+def getExperiments(distMat, all_predictor, all_expected, trainSize, eps, numIter=100, numBases=100):
     experiment = {
         "correlation": [],
         "predicted": []
     }
 
     for i in range(numIter):
-        print(i, end=" ")
+        print(i, end=" ", file=sys.stderr)
 
         selectIdx = np.arange(trainSize)
         np.random.shuffle(selectIdx)
@@ -117,7 +117,7 @@ def getExperiments(distMat, all_predictor, all_expected, eps, trainSize, numIter
 
         selectDistances = distMat[:,selectIdx]
 
-        predicted, real = rbfPredict(all_predictor, selectDistances, eps)
+        predicted, real = rbfPredict(all_predictor, selectDistances, trainSize, eps)
 
         mmags = np.array(all_expected)[trainSize:]
 
@@ -146,6 +146,6 @@ trainSize = distanceMatrix.shape[0] // 2
 trainMat = distanceMatrix[:trainSize,:]
 eps = 5 * np.mean(trainMat[trainMat > 0])**2
 
-experiment = getExperiments(distanceMatrix, eqtw.y_logN, x_maxMag, eps, trainSize, numIter=20)
+experiment = getExperiments(distanceMatrix, eqtw.y_logN, x_maxMag, trainSize, eps, numIter=20)
 
-print(" ".join(experiment["correlation"]))
+print(" ".join([ f"{i:.5f}" for i in experiment["correlation"] ]))
