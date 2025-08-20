@@ -123,7 +123,7 @@ class EQTimeWindows:
         self.x_quakes  = []
         self.x_maxMag  = []
         self.x_meanMag = []
-        self.x_logN    = []
+        self.y_logN    = []
 
         self.x_quakes_N    = []
         self.x_quakes_logN = []
@@ -160,7 +160,7 @@ class EQTimeWindows:
                 self.x_meanMag.append(0)
 
             self.x_quakes.append(quakeSequence)
-            self.x_logN.append(np.log(len(predWindow) + 1)) #variable to predict
+            self.y_logN.append(np.log(len(predWindow) + 1)) #variable to predict
 
             self.x_quakes_N.append(len(quakeSequence))
             self.x_quakes_logN.append(np.log(len(quakeSequence) + 1))
