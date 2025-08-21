@@ -39,6 +39,13 @@ parser.add_argument("--dir",
         help="Read distance matrix from this directory.",
         type=str,
         default="./")
+parser.add_argument("--limit-windows",
+        help="Limits the number of earthquakes in each window to the X-percentile of the window sizes distribution.",
+        action='store_true')
+parser.add_argument("--limit-windows-p",
+        help="Percentile to which window sizes should be truncated to.",
+        type=float,
+        default=0.8)
 args = parser.parse_args()
 
 print("Beginning program.")
@@ -57,6 +64,8 @@ EXPERIMENT_NAME = [
 ]
 # if args.partial:
 #     EXPERIMENT_NAME += [f"partial{args.partial_n}"]
+if args.limit_windows:
+    EXPERIMENT_NAME += [f"lwindows{args.limit_windows_p}"]
 EXPERIMENT_NAME = "-".join(EXPERIMENT_NAME)
 print(f"Experiment name: {EXPERIMENT_NAME}")
 
