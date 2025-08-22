@@ -145,7 +145,15 @@ def getExperiments(distMat, all_predictor, all_expected, trainSize, eps, numIter
     return experiment
 
 data = load_dataset(args.region, args.minmag)
-eqtw = EQTimeWindows(data, args.inputw, args.outputw)
+
+UID = "perform-forecasts-uid-" + str(hash(data)) + str(args.inputw) + str(args.outputw)
+fname = os.path.join("/var/tmp/", UID)
+if os.path.exists(fname):
+    print("Reusing existing EQTimeWindows")
+    eqtw = pklload(fname)
+else:
+    eqtw = EQTimeWindows(data, args.inputw, args.outputw)
+    pkldump(eqtw, fname)
 x_maxMag = eqtw.x_maxMag
 
 fname = os.path.join(args.dir, f"{EXPERIMENT_NAME}.npy")
