@@ -39,13 +39,6 @@ parser.add_argument("--dir",
         help="Read distance matrix from this directory.",
         type=str,
         default="./")
-parser.add_argument("--limit-windows",
-        help="Limits the number of earthquakes in each window to the X-percentile of the window sizes distribution.",
-        action='store_true')
-parser.add_argument("--limit-windows-p",
-        help="Percentile to which window sizes should be truncated to.",
-        type=float,
-        default=0.8)
 args = parser.parse_args()
 
 print("Beginning program.")
@@ -146,7 +139,7 @@ def getExperiments(distMat, all_predictor, all_expected, trainSize, eps, numIter
 
 data = load_dataset(args.region, args.minmag)
 
-UID = "perform-forecasts-uid-" + str(hash(data)) + str(args.inputw) + str(args.outputw)
+UID = "perform-forecasts-uid-" + args.region + str(len(data)) + str(args.inputw) + str(args.outputw)
 fname = os.path.join("/var/tmp/", UID)
 if os.path.exists(fname):
     print("Reusing existing EQTimeWindows")
