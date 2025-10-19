@@ -5,7 +5,7 @@ import pickle
 import time
 
 VALID_REGIONS = ["ja", "gr", "nz", "jma", "toho", "well", "stil", "jmatoho"]
-VALID_CLUSTER_REGIONS = ["ja", "nz"]
+VALID_CLUSTER_REGIONS = ["ja", "nz", "gr"]
 
 def pkldump(obj, file):
     with open(file, "wb") as fp:
@@ -92,7 +92,8 @@ def load_cluster_dataset(region, minmag=0):
 
     regionToDatafile = {
         "ja": "../japan-clusterized-dataframes.pickle",
-        "nz": "../newzealand-clusterized-dataframes.pickle"
+        "nz": "../newzealand-clusterized-dataframes.pickle",
+        "gr": "../greece-clusterized-dataframes.pickle"
     }
 
     data = pklload(regionToDatafile[region])
