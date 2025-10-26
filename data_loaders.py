@@ -8,6 +8,12 @@ import tqdm
 
 VALID_REGIONS = ["ja", "gr", "nz", "jma", "toho", "well", "stil", "jmatoho"]
 VALID_CLUSTER_REGIONS = ["ja", "nz", "gr"]
+DF_COLUMNS_MAIN = ["time.seconds", "magnitude", "longitude", "latitude", "depth"]
+TS_INDEX = 0
+MAG_INDEX = 1
+LON_INDEX = 2
+LAT_INDEX = 3
+DEP_INDEX = 4
 
 def pkldump(obj, file):
     with open(file, "wb") as fp:
@@ -126,7 +132,7 @@ def make_sets_of_eqs(data, windowSize, nThreads, lastDayNumber=7913, firstDayNum
 
         quakeWindow = data[ (dayNumbers >= windowFirstDN) * (dayNumbers <= windowLastDN) ]
         if len(quakeWindow) > 0:
-            quakeSequence = np.array(quakeWindow[["time.seconds", "magnitude", "longitude", "latitude", "depth"]])
+            quakeSequence = np.array(quakeWindow[DF_COLUMNS_MAIN])
             quakeSequence[:,0] = quakeSequence[:,0] - (i-windowSize+1) * 24 * 60 * 60
         else:
             quakeSequence = np.array([])
@@ -135,7 +141,7 @@ def make_sets_of_eqs(data, windowSize, nThreads, lastDayNumber=7913, firstDayNum
 
     allArgs = range(firstDayNumber, lastDayNumber+1)
     with mp.Pool(nThreads) as p:
-        allQuakeSequences = list(tqdm.tqdm(p.imap_unordered(mp_get_eqs, allArgs, chunksize=1), total=len(allArgs), smoothing=0.1))
+        allQuakeSequences = list(tqdm.tqdm(p.imap_unordered(mp_get_eqs, allArgs, chunksize=250), total=len(allArgs), smoothing=0.1))
 
     return allQuakeSequences
 
