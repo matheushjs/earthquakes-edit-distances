@@ -140,7 +140,7 @@ def make_sets_of_eqs(data, windowSize, nThreads, lastDayNumber=7913, firstDayNum
     return allQuakeSequences
 
 class EQTimeWindows:
-    def __init__(self, data, inputw=7, outputw=1):
+    def __init__(self, data, inputw=7, outputw=1, nthreads=1):
         try:
             for col in ["day.number", "magnitude", "latitude", "longitude", "depth", "time.seconds"]:
                 data[col]
@@ -150,6 +150,7 @@ class EQTimeWindows:
         self.inputw = inputw
         self.outputw = outputw
         self.data = data
+        self.nthreads = nthreads
 
         # prefix 'x' means the variable refers to the X space, the independent variable space (the previous time windows)
         # prefix 'y' means the dependent variable Y space, often the next-window features
