@@ -3,6 +3,8 @@ import pandas as pd
 import datetime as dt
 import pickle
 import time
+import multiprocessing as mp
+import tqdm
 
 VALID_REGIONS = ["ja", "gr", "nz", "jma", "toho", "well", "stil", "jmatoho"]
 VALID_CLUSTER_REGIONS = ["ja", "nz", "gr"]
@@ -106,6 +108,36 @@ def load_cluster_dataset(region, minmag=0):
         data[i] = d
     
     return data
+
+# Collects the set of earthquakes in each time window of size windowSize
+# For now we assume a stride of 1 day
+# Days that could not be calculated are returned as None
+# We do not calculate time windows that are not fully contained in the dataframe's range
+# 'lastDayNumber' is the last day number up to which to process the dataframe.
+def make_sets_of_eqs(data, windowSize, nThreads, lastDayNumber=7913, firstDayNumber=0):
+    dayNumbers = data["day.number"].to_numpy()
+
+    def mp_get_eqs(i):
+        windowFirstDN = i - windowSize + 1
+        windowLastDN  = i
+
+        if windowFirstDN < firstDayNumber or windowLastDN > lastDayNumber:
+            return None
+
+        quakeWindow = data[ (dayNumbers >= windowFirstDN) * (dayNumbers <= windowLastDN) ]
+        if len(quakeWindow) > 0:
+            quakeSequence = np.array(quakeWindow[["time.seconds", "magnitude", "longitude", "latitude", "depth"]])
+            quakeSequence[:,0] = quakeSequence[:,0] - (i-windowSize+1) * 24 * 60 * 60
+        else:
+            quakeSequence = np.array([])
+
+        return quakeSequence
+
+    allArgs = range(firstDayNumber, lastDayNumber+1)
+    with mp.Pool(nThreads) as p:
+        allQuakeSequences = list(tqdm.tqdm(p.imap_unordered(mp_get_eqs, allArgs, chunksize=1), total=len(allArgs), smoothing=0.1))
+
+    return allQuakeSequences
 
 class EQTimeWindows:
     def __init__(self, data, inputw=7, outputw=1):
