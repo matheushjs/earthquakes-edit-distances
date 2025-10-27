@@ -145,6 +145,23 @@ def make_sets_of_eqs(data, windowSize, nThreads, lastDayNumber=7913, firstDayNum
 
     return allQuakeSequences
 
+def quake_sequence_basic_stats(quakeSequence, nThreads):
+    def mp_get_stats(i):
+        quakes = quakeSequence[i]
+
+        maxMag = quakes[:,MAG_INDEX].max() if len(quakes) > 0 else 0
+        meanMag = quakes[:,MAG_INDEX].mean() if len(quakes) > 0 else 0
+        N = len(quakes)
+        logN = np.log(len(quakes) + 1)
+
+        return [ maxMag, meanMag, N, logN ]
+
+    allArgs = range(len(quakeSequence))
+    with mp.Pool(nThreads) as p:
+        allStats = list(tqdm.tqdm(p.imap_unordered(mp_get_stats, allArgs, chunksize=250), total=len(allArgs), smoothing=0.1))
+
+    return np.array(allStats)
+
 class EQTimeWindows:
     def __init__(self, data, inputw=7, outputw=1, nthreads=1):
         try:
