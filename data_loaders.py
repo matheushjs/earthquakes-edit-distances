@@ -160,7 +160,7 @@ def quake_sequence_basic_stats(quakeSequence, nThreads):
     with mp.Pool(nThreads) as p:
         allStats = list(tqdm.tqdm(p.imap_unordered(mp_get_stats, allArgs, chunksize=250), total=len(allArgs), smoothing=0.1))
 
-    return np.array(allStats)
+    return pd.DataFrame(allStats, columns=["maxMag", "meanMag", "N", "logN"])
 
 class EQTimeWindows:
     def __init__(self, data, inputw=7, outputw=1, nthreads=1):
@@ -169,7 +169,12 @@ class EQTimeWindows:
                 data[col]
         except:
             raise Exception("Dataframe does not have the required columns.")
-        
+
+        if not isinstance(inputw, list):
+            inputw = [inputw]
+        if not isinstance(outputw, list):
+            outputw = [outputw]
+
         self.inputw = inputw
         self.outputw = outputw
         self.data = data
@@ -177,50 +182,11 @@ class EQTimeWindows:
 
         # prefix 'x' means the variable refers to the X space, the independent variable space (the previous time windows)
         # prefix 'y' means the dependent variable Y space, often the next-window features
-        self.x_quakes  = []
-        self.x_maxMag  = []
-        self.x_meanMag = []
-        self.y_logN    = []
-
-        self.x_quakes_N    = []
-        self.x_quakes_logN = []
-        #allX_seismicity = []
-
-        self.y_dayNumbers = []
-
-        # Window size
-        W = inputw
-
-        # Prediction window
-        PRED_WINDOW = outputw
-
-        dayNumbers = data["day.number"] # To make things faster, save it in a variable
-        maxDayNumber = (dt.datetime(2021, 8, 31) - dt.datetime(2000, 1, 1)).days
-        # NOTE: day.number of 2000/01/01 is 0, so we do not need to add 1 to maxDayNumber
-
-        for i in range(W-1, maxDayNumber + 1 - PRED_WINDOW):
-            quakeWindow = data[ (dayNumbers > i - W) * (dayNumbers <= i) ]
-            predWindow  = data[ (dayNumbers > i) * (dayNumbers <= i+PRED_WINDOW) ]
-            self.y_dayNumbers.append(i + 1)
-
-            if len(quakeWindow) > 0:
-                quakeSequence = np.array(quakeWindow[["time.seconds", "magnitude", "longitude", "latitude", "depth"]])
-                quakeSequence[:,0] = quakeSequence[:,0] - (i-W+1) * 24 * 60 * 60
-            else:
-                quakeSequence = np.array([])
-
-            if len(predWindow) > 0:
-                self.x_maxMag.append(predWindow["magnitude"].max())
-                self.x_meanMag.append(predWindow["magnitude"].mean())
-            else:
-                self.x_maxMag.append(0)
-                self.x_meanMag.append(0)
-
-            self.x_quakes.append(quakeSequence)
-            self.y_logN.append(np.log(len(predWindow) + 1)) #variable to predict
-
-            self.x_quakes_N.append(len(quakeSequence))
-            self.x_quakes_logN.append(np.log(len(quakeSequence) + 1))
+        self.x_quakes  = [ make_sets_of_eqs(self.data, windowSize, self.nthreads) for windowSize in inputw ]
+        self.y_quakes  = [ make_sets_of_eqs(self.data, windowSize, self.nthreads) for windowSize in outputw ]
+        
+        self.x_stats = [ quake_sequence_basic_stats(seq) for seq in self.x_quakes ]
+        self.y_stats = [ quake_sequence_basic_stats(seq) for seq in self.y_quakes ]
 
     def getBaselineStds(self, tlambda):
         df = self.data
