@@ -185,6 +185,8 @@ class EQTimeWindows:
         self.x_quakes  = [ make_sets_of_eqs(self.data, windowSize, self.nthreads) for windowSize in inputw ]
         self.y_quakes  = [ make_sets_of_eqs(self.data, windowSize, self.nthreads) for windowSize in outputw ]
         
+        self.x_quakes, self.y_quakes = self._trimQuakes(self.x_quakes, self.y_quakes)
+
         self.x_stats = [ quake_sequence_basic_stats(seq) for seq in self.x_quakes ]
         self.y_stats = [ quake_sequence_basic_stats(seq) for seq in self.y_quakes ]
 
@@ -199,3 +201,16 @@ class EQTimeWindows:
         longitudeStd = df["longitude"].std()
 
         return [timeStd, magnitudeStd, longitudeStd, latitudeStd, depthStd]
+    
+    # Trims the quake sequences to remove all the trailing and leading None objects
+    def _trimQuakes(xquakes, yquakes):
+        allQuakes = xquakes + yquakes
+
+        # Gets the indices for which an earthquake time window exists in each quakeSeries
+        # in xquakes AND yquakes simultaneously
+        indices = np.argwhere(np.all([ [ i is not None for i in quakes ] for quakes in allQuakes ], axis=0)).ravel()
+
+        xquakes = [ [ quakes[idx] for idx in indices ] for quakes in xquakes ]
+        yquakes = [ [ quakes[idx] for idx in indices ] for quakes in yquakes ]
+
+        return xquakes, yquakes
