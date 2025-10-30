@@ -120,45 +120,56 @@ def load_cluster_dataset(region, minmag=0):
 # Days that could not be calculated are returned as None
 # We do not calculate time windows that are not fully contained in the dataframe's range
 # 'lastDayNumber' is the last day number up to which to process the dataframe.
-def make_sets_of_eqs(data, windowSize, nThreads, lastDayNumber=7913, firstDayNumber=0):
+make_sets_of_eqs_mp_get_eqs_data = {
+    "data": None,
+    "windowSize": None,
+    "lastDayNumber": None,
+    "firstDayNumber": None
+}
+def make_sets_of_eqs_mp_get_eqs(i):
+    data = make_sets_of_eqs_mp_get_eqs_data["data"]
+    windowSize = make_sets_of_eqs_mp_get_eqs_data["windowSize"]
+    lastDayNumber = make_sets_of_eqs_mp_get_eqs_data["lastDayNumber"]
+    firstDayNumber = make_sets_of_eqs_mp_get_eqs_data["firstDayNumber"]
     dayNumbers = data["day.number"].to_numpy()
 
-    def mp_get_eqs(i):
-        windowFirstDN = i - windowSize + 1
-        windowLastDN  = i
+    windowFirstDN = i - windowSize + 1
+    windowLastDN  = i
 
-        if windowFirstDN < firstDayNumber or windowLastDN > lastDayNumber:
-            return None
+    if windowFirstDN < firstDayNumber or windowLastDN > lastDayNumber:
+        return None
 
-        quakeWindow = data[ (dayNumbers >= windowFirstDN) * (dayNumbers <= windowLastDN) ]
-        if len(quakeWindow) > 0:
-            quakeSequence = np.array(quakeWindow[DF_COLUMNS_MAIN])
-            quakeSequence[:,0] = quakeSequence[:,0] - (i-windowSize+1) * 24 * 60 * 60
-        else:
-            quakeSequence = np.array([])
+    quakeWindow = data[ (dayNumbers >= windowFirstDN) * (dayNumbers <= windowLastDN) ]
+    if len(quakeWindow) > 0:
+        quakeSequence = np.array(quakeWindow[DF_COLUMNS_MAIN])
+        quakeSequence[:,0] = quakeSequence[:,0] - (i-windowSize+1) * 24 * 60 * 60
+    else:
+        quakeSequence = np.array([])
 
-        return quakeSequence
+    return quakeSequence
+def make_sets_of_eqs(data, windowSize, nThreads, lastDayNumber=7913, firstDayNumber=0):
+    make_sets_of_eqs_mp_get_eqs_data["data"]            = data
+    make_sets_of_eqs_mp_get_eqs_data["windowSize"]      = windowSize
+    make_sets_of_eqs_mp_get_eqs_data["lastDayNumber"]   = lastDayNumber
+    make_sets_of_eqs_mp_get_eqs_data["firstDayNumber"]  = firstDayNumber
 
     allArgs = range(firstDayNumber, lastDayNumber+1)
     with mp.Pool(nThreads) as p:
-        allQuakeSequences = list(tqdm.tqdm(p.imap_unordered(mp_get_eqs, allArgs, chunksize=250), total=len(allArgs), smoothing=0.1))
+        allQuakeSequences = list(tqdm.tqdm(p.imap_unordered(make_sets_of_eqs_mp_get_eqs, allArgs, chunksize=250), total=len(allArgs), smoothing=0.1))
 
     return allQuakeSequences
 
+def quake_sequence_basic_stats_mp_get_stats(quakes):
+    maxMag = quakes[:,MAG_INDEX].max() if len(quakes) > 0 else 0
+    meanMag = quakes[:,MAG_INDEX].mean() if len(quakes) > 0 else 0
+    N = len(quakes)
+    logN = np.log(len(quakes) + 1)
+
+    return [ maxMag, meanMag, N, logN ]
 def quake_sequence_basic_stats(quakeSequence, nThreads):
-    def mp_get_stats(i):
-        quakes = quakeSequence[i]
-
-        maxMag = quakes[:,MAG_INDEX].max() if len(quakes) > 0 else 0
-        meanMag = quakes[:,MAG_INDEX].mean() if len(quakes) > 0 else 0
-        N = len(quakes)
-        logN = np.log(len(quakes) + 1)
-
-        return [ maxMag, meanMag, N, logN ]
-
-    allArgs = range(len(quakeSequence))
+    allArgs = quakeSequence
     with mp.Pool(nThreads) as p:
-        allStats = list(tqdm.tqdm(p.imap_unordered(mp_get_stats, allArgs, chunksize=250), total=len(allArgs), smoothing=0.1))
+        allStats = list(tqdm.tqdm(p.imap_unordered(quake_sequence_basic_stats_mp_get_stats, allArgs, chunksize=250), total=len(allArgs), smoothing=0.1))
 
     return pd.DataFrame(allStats, columns=["maxMag", "meanMag", "N", "logN"])
 
@@ -187,8 +198,8 @@ class EQTimeWindows:
         
         self.x_quakes, self.y_quakes = self._trimQuakes(self.x_quakes, self.y_quakes)
 
-        self.x_stats = [ quake_sequence_basic_stats(seq) for seq in self.x_quakes ]
-        self.y_stats = [ quake_sequence_basic_stats(seq) for seq in self.y_quakes ]
+        self.x_stats = [ quake_sequence_basic_stats(seq, self.nthreads) for seq in self.x_quakes ]
+        self.y_stats = [ quake_sequence_basic_stats(seq, self.nthreads) for seq in self.y_quakes ]
 
     def getBaselineStds(self, tlambda):
         df = self.data
@@ -203,7 +214,7 @@ class EQTimeWindows:
         return [timeStd, magnitudeStd, longitudeStd, latitudeStd, depthStd]
     
     # Trims the quake sequences to remove all the trailing and leading None objects
-    def _trimQuakes(xquakes, yquakes):
+    def _trimQuakes(self, xquakes, yquakes):
         allQuakes = xquakes + yquakes
 
         # Gets the indices for which an earthquake time window exists in each quakeSeries
