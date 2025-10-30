@@ -4,6 +4,8 @@ import datetime as dt
 import pickle
 import time
 import multiprocessing as mp
+import matplotlib.pyplot as plt
+import seaborn as sns
 import tqdm
 
 VALID_REGIONS = ["ja", "gr", "nz", "jma", "toho", "well", "stil", "jmatoho"]
@@ -94,7 +96,7 @@ def load_dataset(region, minmag=0):
     
     return data
 
-def load_cluster_dataset(region, minmag=0):
+def load_cluster_dataset(region, minmag=0, plot=True):
     if region not in VALID_CLUSTER_REGIONS:
         raise Exception(f"Invalid region: {region}.")
 
@@ -112,7 +114,23 @@ def load_cluster_dataset(region, minmag=0):
         d = d.query("`day.number` < 7914") #d.query("year <= 2021").query("year < 2021 or month < 9")
         d = d.copy().reset_index(drop=True) # Ensures we are not working with a pandas slice
         data[i] = d
-    
+
+    # Sort based on minimum longitude
+    data = sorted(data, key=lambda x: x.longitude.min())
+
+    if plot:
+        cmap = sns.color_palette("Set2")
+
+        for i, slic in enumerate(data):
+            mlat = slic["latitude"].median()
+            mlon = slic["longitude"].median()
+            
+            plt.scatter(slic["longitude"], slic["latitude"], color=cmap[i % len(cmap)])
+            
+            plt.text(mlon, mlat, str(i))
+
+        plt.show()
+
     return data
 
 # Collects the set of earthquakes in each time window of size windowSize
@@ -155,7 +173,7 @@ def make_sets_of_eqs(data, windowSize, nThreads, lastDayNumber=7913, firstDayNum
 
     allArgs = range(firstDayNumber, lastDayNumber+1)
     with mp.Pool(nThreads) as p:
-        allQuakeSequences = list(tqdm.tqdm(p.imap_unordered(make_sets_of_eqs_mp_get_eqs, allArgs, chunksize=250), total=len(allArgs), smoothing=0.1))
+        allQuakeSequences = list(tqdm.tqdm(p.imap(make_sets_of_eqs_mp_get_eqs, allArgs, chunksize=250), total=len(allArgs), smoothing=0.1))
 
     return allQuakeSequences
 
@@ -169,7 +187,7 @@ def quake_sequence_basic_stats_mp_get_stats(quakes):
 def quake_sequence_basic_stats(quakeSequence, nThreads):
     allArgs = quakeSequence
     with mp.Pool(nThreads) as p:
-        allStats = list(tqdm.tqdm(p.imap_unordered(quake_sequence_basic_stats_mp_get_stats, allArgs, chunksize=250), total=len(allArgs), smoothing=0.1))
+        allStats = list(tqdm.tqdm(p.imap(quake_sequence_basic_stats_mp_get_stats, allArgs, chunksize=250), total=len(allArgs), smoothing=0.1))
 
     return pd.DataFrame(allStats, columns=["maxMag", "meanMag", "N", "logN"])
 
@@ -195,7 +213,7 @@ class EQTimeWindows:
         # prefix 'y' means the dependent variable Y space, often the next-window features
         self.x_quakes  = [ make_sets_of_eqs(self.data, windowSize, self.nthreads) for windowSize in inputw ]
         self.y_quakes  = [ make_sets_of_eqs(self.data, windowSize, self.nthreads) for windowSize in outputw ]
-        
+
         self.x_quakes, self.y_quakes = self._trimQuakes(self.x_quakes, self.y_quakes)
 
         self.x_stats = [ quake_sequence_basic_stats(seq, self.nthreads) for seq in self.x_quakes ]
@@ -212,7 +230,7 @@ class EQTimeWindows:
         longitudeStd = df["longitude"].std()
 
         return [timeStd, magnitudeStd, longitudeStd, latitudeStd, depthStd]
-    
+
     # Trims the quake sequences to remove all the trailing and leading None objects
     def _trimQuakes(self, xquakes, yquakes):
         allQuakes = xquakes + yquakes
