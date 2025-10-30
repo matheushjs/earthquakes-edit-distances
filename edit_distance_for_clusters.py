@@ -164,20 +164,22 @@ data = load_cluster_dataset(args.region, args.minmag)
 allDistMatrices = []
 
 for df in data:
-    eqtw = EQTimeWindows(df, args.inputw, args.outputw)
+    eqtw = EQTimeWindows(df, args.inputw, args.outputw, args.nthreads)
 
     baselineStds = eqtw.getBaselineStds(args.tlambda)
     baselineLambdas = [ 1 / i for i in baselineStds ]
 
+    quakes = eqtw.x_quakes[0]
+
     if args.partial:
-        valid_idxs = random.sample(range(len(eqtw.x_quakes) // 2), k=args.partial_n)
+        valid_idxs = random.sample(range(len(quakes) // 2), k=args.partial_n)
         #print(sorted(valid_idxs))
         valid_idxs = set(valid_idxs)
     else:
-        valid_idxs = set(range(len(eqtw.x_quakes)))
+        valid_idxs = set(range(len(quakes)))
 
     def calculateDistances_d(idx):
-        return calculateDistances(idx, eqtw.x_quakes, valid_idxs)
+        return calculateDistances(idx, quakes, valid_idxs)
 
     # allDistances = [ calculateDistances(i) for i in range(len(allX_quakes)) ]
 
@@ -185,7 +187,7 @@ for df in data:
         mp.set_start_method('fork')
     except Exception: pass
 
-    allArgs = list(range(0,len(eqtw.x_quakes)**2,STRIDE))
+    allArgs = list(range(0,len(quakes)**2,STRIDE))
 
     if RANDOMIZE_ARGS:
         allArgs_idxRand = list(range(len(allArgs))) 
@@ -204,7 +206,7 @@ for df in data:
     end = time.time()
     print("Elapsed: ", end - beg)
 
-    N = len(eqtw.x_quakes)
+    N = len(quakes)
 
     distanceMatrix = np.zeros(N**2)
 
