@@ -96,7 +96,7 @@ def load_dataset(region, minmag=0):
     
     return data
 
-def load_cluster_dataset(region, minmag=0, plot=True):
+def load_cluster_dataset(region, minmag=0, plot=False):
     if region not in VALID_CLUSTER_REGIONS:
         raise Exception(f"Invalid region: {region}.")
 
