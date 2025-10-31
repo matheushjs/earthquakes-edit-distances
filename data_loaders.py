@@ -191,6 +191,110 @@ def quake_sequence_basic_stats(quakeSequence, nThreads):
 
     return pd.DataFrame(allStats, columns=["maxMag", "meanMag", "N", "logN"])
 
+def TValue(quakes, threshold):
+    if len(quakes) == 0:
+        return np.nan # We will later substitute by the maximum observed TValue
+
+    mags = np.array([ i[MAG_INDEX] for i in quakes ])
+    tss  = np.array([ i[TS_INDEX] for i in quakes ])
+    idx = mags > threshold
+
+    tss = tss[idx]
+
+    if len(tss) < 2:
+        return np.nan
+
+    return tss[-1] - tss[0]
+
+def meanMag(quakes):
+    if len(quakes) == 0:
+        return 0
+
+    mags = np.array([ i[MAG_INDEX] for i in quakes ])
+
+    return np.mean(mags)
+
+def energyRate(quakes, windowLength):
+    if len(quakes) == 0:
+        return 0
+
+    mags = np.array([ i[MAG_INDEX] for i in quakes ])
+
+    return np.sum(np.sqrt(10**(mags*1.5 + 11.8))) / windowLength
+
+def grLaw(quakes):
+    if len(quakes) < 2:
+        return [0, 0, np.nan, 0] #nan will be substituted by the largest value in the training set
+
+    mags = np.array([ i[MAG_INDEX] for i in quakes ])
+    N = np.array([ np.sum(mags >= mags[i]) for i in range(len(mags)) ])
+
+    divisor = ( np.sum(mags)**2 - len(mags)*np.sum(mags**2) )
+    if divisor == 0:
+        return [0, 0, np.nan, 0]
+
+    b = (len(mags) * np.sum(mags * N) - np.sum(mags) * np.sum(N)) / divisor
+    a = np.sum(np.log10(N) + b*mags) / len(mags)
+    eta = np.sum( (np.log10(N) - (a - b*mags))**2 ) / (len(mags) - 1)
+
+    if b != 0:
+        deficit = np.max(mags) - a/b
+    else:
+        deficit = 0
+
+    return [b, a, eta, deficit]
+
+quakes_to_indicator_features_mp_calculate_data = {
+    "allQuakes": None,
+    "tvalues": None
+}
+def quakes_to_indicator_features_mp_calculate(i):
+    allQuakes = quakes_to_indicator_features_mp_calculate_data["allQuakes"]
+    tvalues = quakes_to_indicator_features_mp_calculate_data["tvalues"]
+
+    quakes = allQuakes[i]
+    feats = []
+
+    feats.append(len(quakes))
+    feats.append(np.log(len(quakes) + 0.2))
+
+    for t in tvalues:
+        feats.append(TValue(quakes, t))
+
+    feats.append(meanMag(quakes))
+    feats.append(energyRate(quakes, 15))
+    feats.extend(grLaw(quakes))
+
+    return feats
+
+def quakes_to_indicator_features(allQuakes, windowSize, nThreads, tvalues=[2.5, 3, 3.5, 4, 4.5, 5, 5.5]):
+    allFeatures = []
+    colNames = []
+
+    colNames = [ name.format(windowSize) for name in [
+            '{}-len-quakes',
+            '{}-log-len-quakes',
+    ]]
+    colNames = colNames + [ '{}-tvalue-{:.1f}'.format(windowSize, t) for t in tvalues ]
+    colNames = colNames + [ name.format(windowSize) for name in [
+            '{}-mean-mag',
+            '{}-energy-rate',
+            '{}-gr-law-b',
+            '{}-gr-law-a',
+            '{}-gr-law-eta',
+            '{}-gr-law-deficit'
+        ]]
+
+    quakes_to_indicator_features_mp_calculate_data["allQuakes"] = allQuakes
+    quakes_to_indicator_features_mp_calculate_data["tvalues"] = tvalues
+
+    allArgs = range(len(allQuakes))
+    with mp.Pool(nThreads) as p:
+        allFeatures = list(tqdm.tqdm(p.imap(make_sets_of_eqs_mp_get_eqs, allArgs, chunksize=250), total=len(allArgs), smoothing=0.1))
+
+    df = pd.DataFrame(allFeatures, columns=colNames)
+    return df
+
 class EQTimeWindows:
     def __init__(self, data, inputw=7, outputw=1, nthreads=1):
         try:
@@ -219,6 +323,8 @@ class EQTimeWindows:
         self.x_stats = [ quake_sequence_basic_stats(seq, self.nthreads) for seq in self.x_quakes ]
         self.y_stats = [ quake_sequence_basic_stats(seq, self.nthreads) for seq in self.y_quakes ]
 
+        self.x_indicators = None
+
     def getBaselineStds(self, tlambda):
         df = self.data
         slic = df[df["day.number"] < 4018] # "year" < 2011
@@ -243,3 +349,7 @@ class EQTimeWindows:
         yquakes = [ [ quakes[idx] for idx in indices ] for quakes in yquakes ]
 
         return xquakes, yquakes
+    
+    def getXIndicators(self):
+        if self.x_indicators is None:
+            raise Exception("Seismicity indicators have not been calculated yet.")
