@@ -353,3 +353,13 @@ class EQTimeWindows:
     def getXIndicators(self):
         if self.x_indicators is None:
             raise Exception("Seismicity indicators have not been calculated yet.")
+
+    def calculateXIndicators(self):
+        self.x_indicators = []
+
+        for quakes, T in zip(self.x_quakes, self.inputw):
+            # Convert list of DataFrames to list of numpy arrays
+            quakes = [ i.to_numpy() for i in quakes ]
+
+            indic = quakes_to_indicator_features(quakes, T, self.nthreads, tvalues=[2.5, 3, 3.5, 4, 4.5, 5, 5.5])
+            self.x_indicators.append(indic)
