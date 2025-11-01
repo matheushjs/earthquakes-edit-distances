@@ -290,7 +290,7 @@ def quakes_to_indicator_features(allQuakes, windowSize, nThreads, tvalues=[2.5, 
 
     allArgs = range(len(allQuakes))
     with mp.Pool(nThreads) as p:
-        allFeatures = list(tqdm.tqdm(p.imap(make_sets_of_eqs_mp_get_eqs, allArgs, chunksize=250), total=len(allArgs), smoothing=0.1))
+        allFeatures = list(tqdm.tqdm(p.imap(quakes_to_indicator_features_mp_calculate, allArgs, chunksize=250), total=len(allArgs), smoothing=0.1))
 
     df = pd.DataFrame(allFeatures, columns=colNames)
     return df
