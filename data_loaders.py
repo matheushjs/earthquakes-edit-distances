@@ -386,3 +386,10 @@ class EQTimeWindows:
                 # if "gr-law-eta" in col:
                 # if "gr-law-deficit" in col:
 
+        # Finally, normalize
+        for indic in self.x_indicators:
+            for col in indic.columns:
+                values = indic[col].to_numpy()
+                indic[col] = (values - np.mean(values)) / np.std(values)
+
+        self.x_indicators_joint = pd.concat(self.x_indicators, axis=1)
