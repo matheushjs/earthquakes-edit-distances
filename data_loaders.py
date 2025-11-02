@@ -393,3 +393,10 @@ class EQTimeWindows:
                 indic[col] = (values - np.mean(values)) / np.std(values)
 
         self.x_indicators_joint = pd.concat(self.x_indicators, axis=1)
+
+if __name__ == "__main__":
+    data = load_dataset("ja")
+
+    eqtw = EQTimeWindows(data, [7,15,30], 1, nthreads = 22)
+
+    eqtw.calculateXIndicators()
