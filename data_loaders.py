@@ -363,3 +363,26 @@ class EQTimeWindows:
         for quakes, T in zip(self.x_quakes, self.inputw):
             indic = quakes_to_indicator_features(quakes, T, self.nthreads, tvalues=[2.5, 3, 3.5, 4, 4.5, 5, 5.5])
             self.x_indicators.append(indic)
+
+        # Now we clean the indicators
+        for indic in self.x_indicators:
+            for col in indic.columns:
+                values = indic[col].to_numpy()
+                nanCount = len(values) - sum(np.isfinite(values))
+                if nanCount > 0 and "tvalue" not in col:
+                    indic = indic.drop(columns=[col])
+                    print("Removing column due to NaNs:", col)
+                elif nanCount > 1000: # Too many nans, remove
+                    indic = indic.drop(columns=[col])
+                    print("Removing column due to more than 1000 NaNs:", col)
+                else: # Tvalue with not that much NaN, change to average
+                    values[~np.isfinite(values)] = np.mean(values[np.isfinite(values)])
+                    indic[col] = values
+                # if "len-quakes" in col: # This catches {}-len-quakes and {}-log-len-quakes
+                # if "mean-mag" in col:
+                # if "energy-rate" in col:
+                # if "gr-law-b" in col:
+                # if "gr-law-a" in col:
+                # if "gr-law-eta" in col:
+                # if "gr-law-deficit" in col:
+
