@@ -52,3 +52,32 @@ for i, j in args._get_kwargs():
     print("{}: {}".format(i, j))
 print("==================")
 
+EXPERIMENT_NAME = [
+    f"distance-matrix-clustered",
+    f"{args.region}",
+    f"minmag{args.minmag}",
+    f"inputw{args.inputw}",
+    f"outputw{args.outputw}",
+    f"tlambda{np.format_float_positional(args.tlambda, trim="-")}"
+]
+EXPERIMENT_NAME2 = [
+    f"distance-matrix-clustered",
+    f"{args.pred_region}",
+    f"minmag{args.minmag}",
+    f"inputw{args.inputw}",
+    f"outputw{args.outputw}",
+    f"tlambda{np.format_float_positional(args.tlambda, trim="-")}"
+]
+# if args.partial:
+#     EXPERIMENT_NAME += [f"partial{args.partial_n}"]
+EXPERIMENT_NAME = "-".join(EXPERIMENT_NAME)
+EXPERIMENT_NAME2 = "-".join(EXPERIMENT_NAME2)
+print(f"Experiment name: {EXPERIMENT_NAME}")
+
+def pkldump(obj, file):
+    with open(file, "wb") as fp:
+        pickle.dump(obj, fp)
+
+def pklload(file):
+    with open(file, "rb") as fp:
+        return pickle.load(fp)
