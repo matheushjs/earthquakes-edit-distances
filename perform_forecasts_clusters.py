@@ -164,3 +164,14 @@ allDistMatrices = pklload(fname)
 fname = os.path.join(args.dir, f"{EXPERIMENT_NAME2}.pickle")
 allDistMatrices_pred = pklload(fname)
 
+allEqtw = []
+for df in tqdm.tqdm(data):
+    eqtw = EQTimeWindows(df, args.inputw, args.outputw)
+    allEqtw.append(eqtw)
+
+allEqtw_pred = []
+for df in tqdm.tqdm(data_pred):
+    eqtw = EQTimeWindows(df, args.inputw, args.outputw)
+    allEqtw_pred.append(eqtw)
+
+
