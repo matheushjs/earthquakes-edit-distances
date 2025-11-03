@@ -153,3 +153,14 @@ def getExperiments(distMat, all_predictor, all_expected, trainSize, eps, numIter
     
     return experiment
 
+
+
+data = load_cluster_dataset(args.region, args.minmag)
+data_pred = load_cluster_dataset(args.pred_region, args.minmag)
+
+fname = os.path.join(args.dir, f"{EXPERIMENT_NAME}.pickle")
+allDistMatrices = pklload(fname)
+
+fname = os.path.join(args.dir, f"{EXPERIMENT_NAME2}.pickle")
+allDistMatrices_pred = pklload(fname)
+
