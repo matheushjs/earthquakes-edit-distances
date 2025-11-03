@@ -191,3 +191,6 @@ for eqtw, distMat in tqdm.tqdm(zip(allEqtw, allDistMatrices)):
         results.append(np.median(experiment["correlation"]))
     allResults.append(results)
 
+heatmap = np.array(allResults)
+fname = os.path.join(args.dir, f"heatmap-{EXPERIMENT_NAME}.npy")
+np.save(fname, heatmap)
