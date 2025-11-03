@@ -175,3 +175,19 @@ for df in tqdm.tqdm(data_pred):
     allEqtw_pred.append(eqtw)
 
 
+allResults = []
+for eqtw, distMat in tqdm.tqdm(zip(allEqtw, allDistMatrices)):
+    results = []
+    for eqtw_pred, distMat_pred in zip(allEqtw_pred, allDistMatrices_pred):
+        x_maxMag = eqtw.x_maxMag
+
+        trainSize = distMat.shape[0] // 2
+        trainMat = distMat[:trainSize,:]
+        eps = 5 * np.mean(trainMat[trainMat > 0])**2
+
+        experiment = getExperiments(distMat, eqtw.y_logN, eqtw_pred.x_maxMag, trainSize, eps, numIter=20)
+
+        print(" ".join([ f"{i:.5f}" for i in experiment["correlation"] ]))
+        results.append(np.median(experiment["correlation"]))
+    allResults.append(results)
+
