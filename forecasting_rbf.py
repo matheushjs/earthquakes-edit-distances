@@ -1,6 +1,6 @@
 import numpy as np
 
-def rbfPredict(y, distMat, trainSize, eps):
+def predict_rbf(y, distMat, trainSize, eps):
     # Find the weights using only the training set
     trainMat = distMat[:trainSize,:]
     
