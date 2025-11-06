@@ -1,8 +1,84 @@
 import numpy as np
+import sklearn.metrics as metrics
 import sys
 import tqdm
 from forecasting_rbf import predict_rbf
 from data_loaders import * # For testing
+
+def optimize_thresholds(predicted, mmags, grid_steps=100):
+    """
+    Performs a 2D grid search to find the best alpha and beta thresholds.
+    
+    Args:
+        predicted (np.array): Predicted log-number of earthquakes.
+        mmags (np.array): Actual max magnitudes (ground truth).
+        grid_steps (int): The resolution of the grid for both alpha and beta.
+
+    Returns:
+        A dictionary containing the best parameters and the full grid data.
+    """
+    
+    epsilon = 1e-6
+    alpha_grid = np.linspace(np.min(predicted) - epsilon, 
+                             np.max(predicted) + epsilon, 
+                             grid_steps)
+    
+    beta_min = 4.5
+    beta_max = np.max(mmags)
+    
+    if beta_max < beta_min:
+        print(f"Warning: Max magnitude in data ({beta_max}) is less than beta_min (4.5).")
+        return None
+
+    beta_grid = np.linspace(beta_min, beta_max + epsilon, grid_steps)
+
+    # scores_grid will store the MCC for each (alpha, beta) pair
+    # Rows will correspond to alpha, columns to beta
+    scores_grid = np.zeros((grid_steps, grid_steps))
+    
+    best_mcc = -1  # MCC ranges from -1 to 1
+    best_alpha = None
+    best_beta = None
+
+    for i, alpha in enumerate(alpha_grid):
+        for j, beta in enumerate(beta_grid):
+            
+            # Apply the classification rule
+            # y_pred: We predict "True" (event) if predicted log-num > alpha
+            y_pred = (predicted > alpha)
+            
+            # y_true: The "True" event is if the actual magnitude > beta
+            y_true = (mmags > beta)
+            
+            # Calculate score
+            tp = np.sum((y_true) * (y_pred))
+            fp = np.sum((~y_true) * (y_pred))
+            fn = np.sum((y_true) * (~y_pred))
+            tn = np.sum((~y_true) * (~y_pred))
+            if tp > 0 and fp > 0 and tn > 0 and fn > 0:
+                odds = np.log(tp / fp) + np.log(tn / fn)
+                mcc = metrics.matthews_corrcoef(y_true, y_pred)
+            else:
+                odds = None
+                mcc = 0
+
+            scores_grid[i, j] = mcc
+            
+            if mcc > best_mcc:
+                best_mcc = mcc
+                best_alpha = alpha
+                best_beta = beta
+                best_odds = odds
+                
+    return {
+        "best_alpha": best_alpha,
+        "best_beta": best_beta,
+        "best_mcc": best_mcc,
+        "best_odds": best_odds
+        # "alpha_grid": alpha_grid,
+        # "beta_grid": beta_grid,
+        # "scores_grid": scores_grid
+    }
 
 experiments_rbf_mp_data = {
     "distMat": None,
@@ -33,7 +109,7 @@ def experiments_rbf_mp(i):
 
     selectDistances = distMat[:,selectIdx]
 
-    predicted = predict_rbf(all_predictor, selectDistances, trainSize, eps)
+    predicted, real = predict_rbf(all_predictor, selectDistances, trainSize, eps)
 
     mmags = np.array(all_expected)[trainSize:]
 
@@ -46,10 +122,12 @@ def experiments_rbf_mp(i):
     # fn = np.sum((mmags >  a) * (predicted <= b))
     # tn = np.sum((mmags <= a) * (predicted <= b))
 
+    metrics = optimize_thresholds(predicted, mmags)
+
     if i == 0:
-        retval = [np.corrcoef(predicted, mmags)[0,1], predicted]
+        retval = [np.corrcoef(predicted, mmags)[0,1], predicted, metrics]
     else:
-        retval = [np.corrcoef(predicted, mmags)[0,1], None]
+        retval = [np.corrcoef(predicted, mmags)[0,1], None, metrics]
 
     return retval
 
@@ -71,6 +149,7 @@ def experiments_rbf(distMat, all_predictor, all_expected, trainSize, eps, numIte
     experiment = {}
     experiment["correlation"] = np.array([ i[0] for i in results ])
     experiment["predicted"] = list(filter(lambda x: x is not None, [ i[1] for i in results ]))
+    experiment["metrics"] = np.array([ i[2] for i in results ])
 
     return experiment
 
@@ -93,7 +172,7 @@ if __name__ == "__main__":
         trainSize,
         eps,
         numIter=100,
-        nThreads=4)
+        nThreads=16)
     
     print(experiment)
     print(np.mean(experiment["correlation"]))
