@@ -63,7 +63,10 @@ def experiments_rbf(distMat, all_predictor, all_expected, trainSize, eps, numIte
 
     allArgs = range(numIter)
     with mp.Pool(nThreads) as p:
-        results = list(tqdm.tqdm(p.imap_unordered(experiments_rbf_mp, allArgs, chunksize=1), total=len(allArgs), smoothing=0.1))
+        results = list(tqdm.tqdm(p.imap_unordered(experiments_rbf_mp, allArgs, chunksize=1),
+                                 total=len(allArgs),
+                                 smoothing=0.1,
+                                 desc="RBF predictions"))
 
     experiment = {}
     experiment["correlation"] = np.array([ i[0] for i in results ])

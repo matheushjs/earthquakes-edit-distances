@@ -173,7 +173,10 @@ def make_sets_of_eqs(data, windowSize, nThreads, lastDayNumber=7913, firstDayNum
 
     allArgs = range(firstDayNumber, lastDayNumber+1)
     with mp.Pool(nThreads) as p:
-        allQuakeSequences = list(tqdm.tqdm(p.imap(make_sets_of_eqs_mp_get_eqs, allArgs, chunksize=250), total=len(allArgs), smoothing=0.1))
+        allQuakeSequences = list(tqdm.tqdm(p.imap(make_sets_of_eqs_mp_get_eqs, allArgs, chunksize=250),
+                                           total=len(allArgs),
+                                           smoothing=0.1,
+                                           desc="Making EQ sets"))
 
     return allQuakeSequences
 
@@ -187,7 +190,10 @@ def quake_sequence_basic_stats_mp_get_stats(quakes):
 def quake_sequence_basic_stats(quakeSequence, nThreads):
     allArgs = quakeSequence
     with mp.Pool(nThreads) as p:
-        allStats = list(tqdm.tqdm(p.imap(quake_sequence_basic_stats_mp_get_stats, allArgs, chunksize=250), total=len(allArgs), smoothing=0.1))
+        allStats = list(tqdm.tqdm(p.imap(quake_sequence_basic_stats_mp_get_stats, allArgs, chunksize=250),
+                                  total=len(allArgs),
+                                  smoothing=0.1,
+                                  desc="EQ basic stats"))
 
     return pd.DataFrame(allStats, columns=["maxMag", "meanMag", "N", "logN"])
 
