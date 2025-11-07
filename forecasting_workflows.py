@@ -5,7 +5,7 @@ import tqdm
 from forecasting_rbf import predict_rbf
 from data_loaders import * # For testing
 
-def optimize_thresholds(predicted, mmags, grid_steps=100):
+def optimize_thresholds(predicted, mmags, grid_steps=50):
     """
     Performs a 2D grid search to find the best alpha and beta thresholds.
     
@@ -89,6 +89,8 @@ experiments_rbf_mp_data = {
     "numBases": None
 }
 def experiments_rbf_mp(i):
+    np.random.seed()
+
     distMat = experiments_rbf_mp_data["distMat"]
     all_predictor = experiments_rbf_mp_data["all_predictor"]
     all_expected = experiments_rbf_mp_data["all_expected"]
@@ -163,7 +165,8 @@ if __name__ == "__main__":
     trainMat = distMat[:trainSize,:trainSize]
     eps = 2 * np.mean(trainMat[trainMat > 0])**2
 
-    logN = [ len(i) for i in eqtw.y_quakes[0][1:] ]
+    logN = [ np.log(len(i) + 1) for i in eqtw.y_quakes[0][1:] ]
+    mmags = eqtw.getXQuakesMaxMag()[0]
 
     experiment = experiments_rbf(
         distMat,
