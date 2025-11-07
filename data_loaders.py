@@ -332,6 +332,17 @@ class EQTimeWindows:
         self.x_indicators = None
         self.x_indicators_joint = None
 
+    def getXQuakesMaxMag(self):
+        return [
+            [ timewindow[:,MAG_INDEX].max() if len(timewindow) > 0 else 0 for timewindow in quakes ]
+            for quakes in self.x_quakes
+        ]
+    def getYQuakesMaxMag(self):
+        return [
+            [ timewindow[:,MAG_INDEX].max() if len(timewindow) > 0 else 0 for timewindow in quakes ]
+            for quakes in self.y_quakes
+        ]
+
     def getBaselineStds(self, tlambda):
         df = self.data
         slic = df[df["day.number"] < 4018] # "year" < 2011
