@@ -1,6 +1,6 @@
 import numpy as np
 import sklearn.metrics as metrics
-import sys
+import os
 import tqdm
 from forecasting_rbf import predict_rbf
 from data_loaders import * # For testing
@@ -141,12 +141,25 @@ def experiments_rbf(distMat, all_predictor, all_expected, trainSize, eps, numIte
     experiments_rbf_mp_data["eps"] = eps
     experiments_rbf_mp_data["numBases"] = numBases
 
+    # Prevent each thread from creating too many other threads
+    os.environ["OMP_NUM_THREADS"] = "2"
+    os.environ["OPENBLAS_NUM_THREADS"] = "2"
+    os.environ["MKL_NUM_THREADS"] = "2"
+    os.environ["NUMEXPR_NUM_THREADS"] = "2"
+    os.environ["VECLIB_MAXIMUM_THREADS"] = "2"
+
     allArgs = range(numIter)
     with mp.Pool(nThreads) as p:
         results = list(tqdm.tqdm(p.imap_unordered(experiments_rbf_mp, allArgs, chunksize=1),
                                  total=len(allArgs),
                                  smoothing=0.1,
                                  desc="RBF predictions"))
+
+    del os.environ["OMP_NUM_THREADS"]
+    del os.environ["OPENBLAS_NUM_THREADS"]
+    del os.environ["MKL_NUM_THREADS"]
+    del os.environ["NUMEXPR_NUM_THREADS"]
+    del os.environ["VECLIB_MAXIMUM_THREADS"]
 
     experiment = {}
     experiment["correlation"] = np.array([ i[0] for i in results ])
@@ -175,7 +188,7 @@ if __name__ == "__main__":
         trainSize,
         eps,
         numIter=100,
-        nThreads=16)
+        nThreads=20)
     
     print(experiment)
     print(np.mean(experiment["correlation"]))
