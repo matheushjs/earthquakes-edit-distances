@@ -13,11 +13,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import copy
 
-batch_size = 128
-lr = 0.001
-epochs = 50000
-earlyStoppingPatience = 100
-
 def training_procedure(
         model, train_loader, test_loader, epochs,
         earlyStoppingPatience=100, lr=0.001, log_steps=100,
