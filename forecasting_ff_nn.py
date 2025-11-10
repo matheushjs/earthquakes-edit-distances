@@ -24,16 +24,16 @@ def rbf_gaussian(x, sigma1=1, sigma2=1):
 
 class MyDataset(Dataset):
     def __init__(self, targets, distMat=None, seisFeatures=None):
-        self.distMat = torch.tensor(distMat).float() if self.distMat is not None else None
-        self.seisFeatures = [ torch.tensor(i).float() for i in seisFeatures ] if self.seisFeatures is not None else None
+        self.distMat = torch.tensor(distMat).float() if distMat is not None else None
+        self.seisFeatures = [ torch.tensor(i).float() for i in seisFeatures ] if seisFeatures is not None else None
         self.targets = torch.tensor(targets).float() # Might need to change to tensor
 
         # print(self.distMat)
         # print(self.targets)
         
     def __getitem__(self, index):
-        x1 = self.distMat[index,:] if self.distMat is not None else None
-        x2 = [ feats[index,:] for feats in self.seisFeatures ] if self.seisFeatures is not None else None
+        x1 = self.distMat[index,:] if self.distMat is not None else torch.tensor(float("NaN"))
+        x2 = [ feats[index,:] for feats in self.seisFeatures ] if self.seisFeatures is not None else torch.tensor(float("NaN"))
         y = self.targets[index]
         # y = y.reshape(-1, 1)
         
