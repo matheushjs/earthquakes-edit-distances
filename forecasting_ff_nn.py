@@ -144,8 +144,27 @@ def predict_ff_nn(
     yNormalizer = np.mean(y)
     y = np.array(y) / yNormalizer
 
-    trainX = []
-    testX  = []
+    class neural_network(nn.Module):
+        # Hierarchical neural network
+        # First layer is composed of subnetworks
+        def __init__(self):
+            super(neural_network, self).__init__()
+
+            self.numFeatures = numBases
+            
+            self.log_sigma1 = torch.nn.Parameter(torch.zeros(self.numFeatures))
+            self.log_sigma2 = torch.nn.Parameter(torch.zeros(self.numFeatures))
+
+            self.fc1 = nn.Linear(in_features=self.numFeatures, out_features=1)
+
+        # x is whatever you set the __getitem__ of the Dataset object to be.
+        def forward(self, x):
+            x = rbf_gaussian(x["distMat"],
+                             torch.exp(self.log_sigma1),
+                             torch.exp(self.log_sigma2))
+
+            x = self.fc1(x)
+            return x
 
     if distMat is not None:
         distMat = distMat / np.mean(distMat) / 2
@@ -156,21 +175,21 @@ def predict_ff_nn(
         np.random.shuffle(idx)
         idx = idx[:numBases]
         
-        trainX.append( distMat[:trainSize,idx] )
-        testX.append(  distMat[trainSize:,idx] )
+        ed_trainX = distMat[:trainSize,idx]
+        ed_testX  = distMat[trainSize:,idx]
     else:
         raise Exception("Not implemented.")
 
     trainY = y[:trainSize]
     testY  = y[trainSize:]
 
-    train_ds = MyDataset(trainX, trainY)
-    test_ds  = MyDataset(testX, testY)
+    train_ds = MyDataset(trainY, distMat=ed_trainX)
+    test_ds  = MyDataset(testY, distMat=ed_testX)
 
     train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
     test_loader  = DataLoader(test_ds, batch_size=batch_size, shuffle=False)
 
-    model = neural_network(trainX)
+    model = neural_network()
 
     epochs = 10000
     lr = 0.001
