@@ -13,6 +13,24 @@ import numpy as np
 import matplotlib.pyplot as plt
 import copy
 
+class MyDataset(Dataset):
+    def __init__(self, distMat, targets):
+        self.distMat = torch.tensor(distMat).float()
+        self.targets = torch.tensor(targets).float() # Might need to change to tensor
+
+        print(self.distMat)
+        print(self.targets)
+        
+    def __getitem__(self, index):
+        x = self.distMat[index,:]
+        y = self.targets[index]
+        # y = y.reshape(-1, 1)
+        
+        return x, y
+
+    def __len__(self):
+        return len(self.targets)
+
 def training_procedure(
         model, train_loader, test_loader, epochs,
         earlyStoppingPatience=100, lr=0.001, log_steps=100,
