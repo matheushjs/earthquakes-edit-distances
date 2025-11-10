@@ -16,7 +16,8 @@ import copy
 def training_procedure(
         model, train_loader, test_loader, epochs,
         earlyStoppingPatience=100, lr=0.001, log_steps=100,
-        eval_steps=100):
+        eval_steps=100
+):
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
     criterion = nn.MSELoss()
 
@@ -101,5 +102,90 @@ def training_procedure(
 
     return best_model, best_eval_loss, best_eval_corr, train_losses, eval_losses, eval_corrs
 
-def predict_ff_nn(y, distMat, trainSize, eps, si_activation="relu"):
-    pass
+def predict_ff_nn(
+        y, trainSize, distMat=None, seisFeatures=None, numBases=100,
+        batch_size=128, log_steps=100, eval_steps=100, si_activation="relu",
+        plot=False
+):
+    if distMat is None and seisFeatures is None:
+        raise Exception("'distMat' and 'seisFeatures' cannot be both None.")
+
+    yNormalizer = np.mean(y)
+    y = np.array(y) / yNormalizer
+
+    trainX = []
+    testX  = []
+
+    if distMat is not None:
+        distMat = distMat / np.mean(distMat) / 2
+
+        #np.random.seed(11)
+
+        idx = np.arange(trainSize)
+        np.random.shuffle(idx)
+        idx = idx[:numBases]
+        
+        trainX.append( distMat[:trainSize,idx] )
+        testX.append(  distMat[trainSize:,idx] )
+    else:
+        raise Exception("Not implemented.")
+
+    trainY = y[:trainSize]
+    testY  = y[trainSize:]
+
+    train_ds = MyDataset(trainX, trainY)
+    test_ds  = MyDataset(testX, testY)
+
+    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
+    test_loader  = DataLoader(test_ds, batch_size=batch_size, shuffle=False)
+
+    model = neural_network(trainX)
+
+    epochs = 10000
+    lr = 0.001
+
+    best_model, best_eval_loss, best_eval_corr, \
+        train_losses, eval_losses, eval_corrs = \
+            training_procedure(model, train_loader, test_loader,
+                               epochs=epochs, lr=lr)
+
+    trainY = trainY * yNormalizer
+    testY = testY * yNormalizer
+
+    # Plotting
+    if plot:
+        plt.figure(figsize=(10, 5))
+        plt.plot(np.arange(len(train_losses)), train_losses, label='Train Loss')
+        eval_x = np.arange(eval_steps, eval_steps * len(eval_losses) + 1, eval_steps)
+        plt.plot(eval_x, eval_losses, label='Eval Loss')
+        plt.xlabel('Steps')
+        plt.ylabel('Loss')
+        plt.title('Training vs Evaluation Loss')
+        plt.legend()
+        plt.grid(True)
+        plt.show()
+
+    with torch.no_grad():
+        x, y = train_ds[:]
+        best_model.eval()
+        predicted = best_model(x).detach().numpy().ravel()*yNormalizer
+        if plot:
+            plt.figure(figsize=(10, 5))
+            plt.scatter(trainY, predicted)
+            plt.show()
+        print(np.corrcoef(trainY, predicted)[0,1])
+        print(np.mean((trainY - predicted)**2))
+
+        x, y = test_ds[:]
+        best_model.eval()
+        predicted = best_model(x).detach().numpy().ravel()*yNormalizer
+        if plot:
+            plt.figure(figsize=(10, 5))
+            plt.scatter(testY, predicted)
+            plt.show()
+        corr = np.corrcoef(testY, predicted)[0,1]
+        print(corr)
+        mse = np.mean((testY - predicted)**2)
+        print(mse)
+
+    return predicted, testY, corr, mse
