@@ -9,6 +9,7 @@ import numpy as np
 import torch
 from torch import nn
 from torch.utils.data import Dataset, DataLoader
+from data_loaders import EQTimeWindows, load_dataset
 import numpy as np
 import matplotlib.pyplot as plt
 import copy
@@ -239,3 +240,21 @@ def predict_ff_nn(
         print(mse)
 
     return predicted, testY, corr, mse
+
+if __name__ == "__main__":
+    data = load_dataset("ja")
+    distMat = np.load("/media/mathjs/HD-ADU3/distance-matrix-ja-minmag0-inputw7-outputw1-tlambda100.npy")
+
+    eqtw = EQTimeWindows(data, 7, 1, nthreads = 22)
+
+    trainSize = distMat.shape[0]//2
+    trainMat = distMat[:trainSize,:trainSize]
+    eps = 2 * np.mean(trainMat[trainMat > 0])**2
+
+    logN = [ np.log(len(i) + 1) for i in eqtw.y_quakes[0] ]
+    mmags = eqtw.getYQuakesMaxMag()[0]
+
+    a = predict_ff_nn(logN[1:], trainSize, distMat=distMat,
+                      earlyStoppingPatience=100, lr=0.001, plot=True)
+
+    print(a)
