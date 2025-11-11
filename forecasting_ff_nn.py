@@ -108,26 +108,11 @@ def training_procedure(
             if step % eval_steps == 0:
                 # Evaluate
                 model.eval()
-                eval_loss = 0.0
-                eval_corr = 0.0
-                all_test_preds = []
-                all_test_targets = []
-                with torch.no_grad():
-                    for test_data, test_target in test_loader:
-                        batch_size = len(test_target)
-                        test_output = model(test_data)
-                        all_test_preds.append(test_output.detach().numpy().ravel())
-                        all_test_targets.append(test_target.detach().numpy())
 
-                        batch_loss = criterion(test_output.ravel(), test_target)
-                        eval_loss += batch_loss.item() * batch_size
-
-                eval_loss /= len(test_loader.dataset)
+                predicted, real = get_predictions(test_loader, model)
+                eval_loss = criterion(torch.tensor(predicted), torch.tensor(real))
                 eval_losses.append(eval_loss)
-
-                all_test_preds = np.concatenate(all_test_preds)
-                all_test_targets = np.concatenate(all_test_targets)
-                eval_corr = np.corrcoef(all_test_preds, all_test_targets)[0,1]
+                eval_corr = np.corrcoef(predicted, real)[0,1]
                 eval_corrs.append(eval_corr)
 
                 avgLoss = np.mean(train_losses[-eval_steps:])
