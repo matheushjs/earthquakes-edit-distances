@@ -45,6 +45,23 @@ class MyDataset(Dataset):
     def __len__(self):
         return len(self.targets)
 
+def get_predictions(loader, model):
+    """Helper function to run inference using a DataLoader."""
+    model.eval()
+    all_preds = []
+    all_targets = []
+    with torch.no_grad():
+        # Your loader yields (data, target) tuples
+        for data, target in loader:
+            preds = model(data).detach().numpy().ravel()
+            all_preds.extend(preds)
+            all_targets.extend(target.detach().numpy().ravel())
+
+    all_preds = np.array(all_preds)
+    all_targets = np.array(all_targets)
+    
+    return all_preds, all_targets
+
 def training_procedure(
         model, train_loader, test_loader, epochs,
         earlyStoppingPatience=100, lr=0.001, log_steps=100,
@@ -221,28 +238,28 @@ def predict_ff_nn(
         plt.grid(True)
         plt.show()
 
-    with torch.no_grad():
-        x, y = train_ds[:]
-        best_model.eval()
-        predicted = best_model(x).detach().numpy().ravel() * y_std + y_mean
-        if plot:
-            plt.figure(figsize=(10, 5))
-            plt.scatter(trainY, predicted)
-            plt.show()
-        print(np.corrcoef(trainY, predicted)[0,1])
-        print(np.mean((trainY - predicted)**2))
+    predicted_train, real_train = get_predictions(train_loader, best_model)
+    predicted_train = predicted_train * y_std + y_mean
+    real_train = real_train * y_std + y_mean
 
-        x, y = test_ds[:]
-        best_model.eval()
-        predicted = best_model(x).detach().numpy().ravel() * y_std + y_mean
-        if plot:
-            plt.figure(figsize=(10, 5))
-            plt.scatter(testY, predicted)
-            plt.show()
-        corr = np.corrcoef(testY, predicted)[0,1]
-        print(corr)
-        mse = np.mean((testY - predicted)**2)
-        print(mse)
+    if plot:
+        plt.figure(figsize=(10, 5))
+        plt.scatter(real_train, predicted_train)
+        plt.show()
+    print(np.corrcoef(real_train, predicted_train)[0,1])
+    print(np.mean((real_train - predicted_train)**2))
+
+    predicted, _ = get_predictions(test_loader, best_model)
+    predicted = predicted * y_std + y_mean
+
+    if plot:
+        plt.figure(figsize=(10, 5))
+        plt.scatter(testY, predicted)
+        plt.show()
+    corr = np.corrcoef(testY, predicted)[0,1]
+    print(corr)
+    mse = np.mean((testY - predicted)**2)
+    print(mse)
 
     return predicted, testY, corr, mse
 
