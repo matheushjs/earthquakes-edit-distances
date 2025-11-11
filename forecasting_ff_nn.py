@@ -133,7 +133,7 @@ def training_procedure(
 def predict_ff_nn(
         y, trainSize, distMat=None, seisFeatures=None, numBases=100,
         batch_size=128, log_steps=100, eval_steps=100, si_activation="relu",
-        plot=False
+        earlyStoppingPatience=100, lr=0.001, plot=False
 ):
     if distMat is None and seisFeatures is None:
         raise Exception("'distMat' and 'seisFeatures' cannot be both None.")
@@ -189,12 +189,11 @@ def predict_ff_nn(
     model = neural_network()
 
     epochs = 10000
-    lr = 0.001
 
     best_model, best_eval_loss, best_eval_corr, \
         train_losses, eval_losses, eval_corrs = \
-            training_procedure(model, train_loader, test_loader,
-                               epochs=epochs, lr=lr)
+            training_procedure(model, train_loader, test_loader, epochs=epochs,
+                               lr=lr, earlyStoppingPatience=earlyStoppingPatience)
 
     trainY = trainY * yNormalizer
     testY = testY * yNormalizer
