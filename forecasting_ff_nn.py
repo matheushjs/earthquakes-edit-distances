@@ -138,8 +138,15 @@ def predict_ff_nn(
     if distMat is None and seisFeatures is None:
         raise Exception("'distMat' and 'seisFeatures' cannot be both None.")
 
-    yNormalizer = np.mean(y)
-    y = np.array(y) / yNormalizer
+    y = np.array(y)
+    trainY_raw = y[:trainSize]
+    testY_raw  = y[trainSize:]
+
+    y_mean = np.mean(trainY_raw)
+    y_std  = np.std(trainY_raw)
+
+    trainY = (trainY_raw - y_mean) / y_std
+    testY  = (testY_raw - y_mean) / y_std
 
     class neural_network(nn.Module):
         # Hierarchical neural network
@@ -154,6 +161,8 @@ def predict_ff_nn(
 
             self.fc1 = nn.Linear(in_features=self.numFeatures, out_features=1)
 
+            self.bn = nn.BatchNorm1d(1)
+
         # x is whatever you set the __getitem__ of the Dataset object to be.
         def forward(self, x):
             x = rbf_gaussian(x["distMat"],
@@ -161,6 +170,10 @@ def predict_ff_nn(
                              torch.exp(self.log_sigma2))
 
             x = self.fc1(x)
+            
+            if x.shape[0] > 1:
+                x = self.bn(x)
+
             return x
 
     if distMat is not None:
@@ -195,8 +208,8 @@ def predict_ff_nn(
             training_procedure(model, train_loader, test_loader, epochs=epochs,
                                lr=lr, earlyStoppingPatience=earlyStoppingPatience)
 
-    trainY = trainY * yNormalizer
-    testY = testY * yNormalizer
+    trainY = trainY * y_std + y_mean
+    testY = testY * y_std + y_mean
 
     # Plotting
     if plot:
@@ -214,7 +227,7 @@ def predict_ff_nn(
     with torch.no_grad():
         x, y = train_ds[:]
         best_model.eval()
-        predicted = best_model(x).detach().numpy().ravel()*yNormalizer
+        predicted = best_model(x).detach().numpy().ravel() * y_std + y_mean
         if plot:
             plt.figure(figsize=(10, 5))
             plt.scatter(trainY, predicted)
@@ -224,7 +237,7 @@ def predict_ff_nn(
 
         x, y = test_ds[:]
         best_model.eval()
-        predicted = best_model(x).detach().numpy().ravel()*yNormalizer
+        predicted = best_model(x).detach().numpy().ravel() * y_std + y_mean
         if plot:
             plt.figure(figsize=(10, 5))
             plt.scatter(testY, predicted)
