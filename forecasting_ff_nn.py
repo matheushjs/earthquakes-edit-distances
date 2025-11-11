@@ -190,9 +190,6 @@ def predict_ff_nn(
     else:
         raise Exception("Not implemented.")
 
-    trainY = y[:trainSize]
-    testY  = y[trainSize:]
-
     train_ds = MyDataset(trainY, distMat=ed_trainX)
     test_ds  = MyDataset(testY, distMat=ed_testX)
 
