@@ -93,28 +93,24 @@ def training_procedure(
                 model.eval()
                 eval_loss = 0.0
                 eval_corr = 0.0
+                all_test_preds = []
+                all_test_targets = []
                 with torch.no_grad():
                     for test_data, test_target in test_loader:
+                        batch_size = len(test_target)
                         test_output = model(test_data)
-                        corr = np.corrcoef(test_output.detach().numpy().ravel(), test_target.detach().numpy())[0,1]
-                        batch_loss = criterion(test_output.ravel(), test_target)
-                        eval_loss += batch_loss.item() * len(test_data)
-                        eval_corr += corr * len(test_data)
-                        # print(test_output.ravel())
-                        # print(test_target)
-                        # print(batch_loss)
-                        # print(np.mean((test_output.detach().numpy().ravel() - test_target.detach().numpy())**2))
-                        # raise Exception
-                        # if step == 500:
-                        #     plt.scatter(test_output.ravel(), test_target, c="blue")
+                        all_test_preds.append(test_output.detach().numpy().ravel())
+                        all_test_targets.append(test_target.detach().numpy())
 
-                    # if step == 500:
-                    #     print(eval_corr / len(test_ds))
-                    #     print(eval_loss / len(test_ds))
-                    #     raise Exception
+                        batch_loss = criterion(test_output.ravel(), test_target)
+                        eval_loss += batch_loss.item() * batch_size
+
                 eval_loss /= len(test_loader.dataset)
                 eval_losses.append(eval_loss)
-                eval_corr /= len(test_loader.dataset)
+
+                all_test_preds = np.concatenate(all_test_preds)
+                all_test_targets = np.concatenate(all_test_targets)
+                eval_corr = np.corrcoef(all_test_preds, all_test_targets)[0,1]
                 eval_corrs.append(eval_corr)
 
                 avgLoss = np.mean(train_losses[-eval_steps:])
