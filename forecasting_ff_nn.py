@@ -205,7 +205,8 @@ def predict_ff_nn(
     best_model, best_eval_loss, best_eval_corr, \
         train_losses, eval_losses, eval_corrs = \
             training_procedure(model, train_loader, test_loader, epochs=epochs,
-                               lr=lr, earlyStoppingPatience=earlyStoppingPatience)
+                               lr=lr, earlyStoppingPatience=earlyStoppingPatience,
+                               log_steps=log_steps, eval_steps=eval_steps)
 
     trainY = trainY * y_std + y_mean
     testY = testY * y_std + y_mean
@@ -262,6 +263,7 @@ if __name__ == "__main__":
     mmags = eqtw.getYQuakesMaxMag()[0]
 
     a = predict_ff_nn(logN[1:], trainSize, distMat=distMat,
-                      earlyStoppingPatience=100, lr=0.001, plot=True)
+                      earlyStoppingPatience=50, lr=0.01, plot=True,
+                      log_steps=1, eval_steps=10, batch_size=128)
 
     print(a)
