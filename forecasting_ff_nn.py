@@ -65,7 +65,7 @@ def get_predictions(loader, model):
 def training_procedure(
         model, train_loader, test_loader, epochs,
         earlyStoppingPatience=100, lr=0.001, log_steps=100,
-        eval_steps=100
+        eval_steps=100, verbose=False
 ):
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
     criterion = nn.MSELoss()
@@ -84,7 +84,8 @@ def training_procedure(
 
     for epoch in range(epochs):
         if earlyStoppingIter >= earlyStoppingPatience:
-            print("Early stopping triggered.")
+            if verbose:
+                print("Early stopping triggered.")
             break
 
         for batch, (data, target) in enumerate(train_loader):
@@ -101,7 +102,7 @@ def training_procedure(
             # Log train loss
             train_losses.append(loss.item())
 
-            if step % log_steps == 0:
+            if verbose and step % log_steps == 0:
                 avgLoss = np.mean(train_losses[-log_steps:])
                 print(f"Step {step} | Train Loss: {avgLoss:.6f} | Epoch: {epoch} [{batch}/{len(train_loader)}] ")
 
@@ -116,7 +117,8 @@ def training_procedure(
                 eval_corrs.append(eval_corr)
 
                 avgLoss = np.mean(train_losses[-eval_steps:])
-                print(f"Step {step} | Eval Loss: {eval_loss:.6f} | Corr: {eval_corr:.6f} | Epoch: {epoch} [{batch}/{len(train_loader)}] ")
+                if verbose:
+                    print(f"Step {step} | Eval Loss: {eval_loss:.6f} | Corr: {eval_corr:.6f} | Epoch: {epoch} [{batch}/{len(train_loader)}] ")
 
                 if eval_loss < best_eval_loss:
                     best_eval_loss = eval_loss
@@ -127,7 +129,8 @@ def training_procedure(
                     earlyStoppingIter += 1
 
                 if earlyStoppingIter >= earlyStoppingPatience:
-                    print("Early stopping.")
+                    if verbose:
+                        print("Early stopping.")
                     break
 
     return best_model, best_eval_loss, best_eval_corr, train_losses, eval_losses, eval_corrs
@@ -135,7 +138,7 @@ def training_procedure(
 def predict_ff_nn(
         y, trainSize, distMat=None, seisFeatures=None, numBases=100,
         batch_size=128, log_steps=100, eval_steps=100, si_activation="relu",
-        earlyStoppingPatience=100, lr=0.001, plot=False
+        earlyStoppingPatience=100, lr=0.001, plot=False, verbose=False
 ):
     if distMat is None and seisFeatures is None:
         raise Exception("'distMat' and 'seisFeatures' cannot be both None.")
@@ -206,7 +209,7 @@ def predict_ff_nn(
         train_losses, eval_losses, eval_corrs = \
             training_procedure(model, train_loader, test_loader, epochs=epochs,
                                lr=lr, earlyStoppingPatience=earlyStoppingPatience,
-                               log_steps=log_steps, eval_steps=eval_steps)
+                               log_steps=log_steps, eval_steps=eval_steps, verbose=verbose)
 
     trainY = trainY * y_std + y_mean
     testY = testY * y_std + y_mean
@@ -232,8 +235,9 @@ def predict_ff_nn(
         plt.figure(figsize=(10, 5))
         plt.scatter(real_train, predicted_train)
         plt.show()
-    print(np.corrcoef(real_train, predicted_train)[0,1])
-    print(np.mean((real_train - predicted_train)**2))
+    if verbose:
+        print(np.corrcoef(real_train, predicted_train)[0,1])
+        print(np.mean((real_train - predicted_train)**2))
 
     predicted, _ = get_predictions(test_loader, best_model)
     predicted = predicted * y_std + y_mean
@@ -243,9 +247,11 @@ def predict_ff_nn(
         plt.scatter(testY, predicted)
         plt.show()
     corr = np.corrcoef(testY, predicted)[0,1]
-    print(corr)
     mse = np.mean((testY - predicted)**2)
-    print(mse)
+    
+    if verbose:
+        print(corr)
+        print(mse)
 
     return predicted, testY, corr, mse
 
