@@ -253,14 +253,16 @@ if __name__ == "__main__":
     logN = [ np.log(len(i) + 1) for i in eqtw.y_quakes[0][1:] ]
     mmags = eqtw.getXQuakesMaxMag()[0]
 
-    experiment = experiments_rbf(
-        distMat,
-        logN,
-        logN,
-        trainSize,
-        eps,
-        numIter=100,
-        nThreads=20)
-    
+    # experiment = experiments_rbf(
+    #     distMat,
+    #     logN,
+    #     logN,
+    #     trainSize,
+    #     eps,
+    #     numIter=100,
+    #     nThreads=20)
+
+    experiment = experiments_ff_nn(logN, mmags[1:], trainSize, distMat=distMat, numIter=10, nThreads=5)
+
     print(experiment)
-    print(np.mean(experiment["correlation"]))
+    print(np.mean(experiment["corr_expected"]))
