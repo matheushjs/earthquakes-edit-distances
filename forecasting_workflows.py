@@ -1,8 +1,11 @@
 import numpy as np
 import sklearn.metrics as metrics
+import torch
+import multiprocessing as mp
 import os
 import tqdm
 from forecasting_rbf import predict_rbf
+from forecasting_ff_nn import predict_ff_nn
 from data_loaders import * # For testing
 
 def optimize_thresholds(predicted, mmags, grid_steps=50):
@@ -165,6 +168,75 @@ def experiments_rbf(distMat, all_predictor, all_expected, trainSize, eps, numIte
     experiment["correlation"] = np.array([ i[0] for i in results ])
     experiment["predicted"] = list(filter(lambda x: x is not None, [ i[1] for i in results ]))
     experiment["metrics"] = np.array([ i[2] for i in results ])
+
+    return experiment
+
+experiments_ff_nn_mp_data = {
+    "distMat": None,
+    "seisFeatures": None,
+    "all_predictor": None,
+    "all_expected": None,
+    "trainSize": None,
+    "numBases": None,
+    "si_activation": None
+}
+def experiments_ff_nn_mp(i):
+    np.random.seed(i + int(time.time()))
+    torch.manual_seed(i + int(time.time()))
+
+    distMat = experiments_ff_nn_mp_data["distMat"]
+    seisFeatures = experiments_ff_nn_mp_data["seisFeatures"]
+    all_predictor = experiments_ff_nn_mp_data["all_predictor"]
+    all_expected = experiments_ff_nn_mp_data["all_expected"]
+    trainSize = experiments_ff_nn_mp_data["trainSize"]
+    numBases = experiments_ff_nn_mp_data["numBases"]
+    si_activation = experiments_ff_nn_mp_data["si_activation"] 
+
+    predicted, testY, corr, mse = predict_ff_nn(all_predictor, trainSize, distMat=distMat, seisFeatures=seisFeatures,
+                      earlyStoppingPatience=50, lr=0.01, verbose=False, numBases=numBases,
+                      si_activation=si_activation, log_steps=1, eval_steps=10, batch_size=128)
+
+    metrics = optimize_thresholds(predicted, all_expected[trainSize:])
+
+    return predicted, testY, corr, mse, metrics
+
+def experiments_ff_nn(all_predictor, all_expected, trainSize,
+        distMat=None, seisFeatures=None, numBases=100, si_activation="relu",
+        numIter=10, nThreads=1
+):
+    experiments_ff_nn_mp_data.update({
+        "distMat": distMat,
+        "seisFeatures": seisFeatures,
+        "all_predictor": all_predictor,
+        "all_expected": all_expected,
+        "trainSize": trainSize,
+        "numBases": numBases,
+        "si_activation": si_activation
+    })
+
+    allArgs = range(numIter)
+    with mp.Pool(nThreads) as p:
+        results = list(tqdm.tqdm(p.imap_unordered(experiments_ff_nn_mp, allArgs, chunksize=1),
+                                 total=len(allArgs),
+                                 smoothing=0.1,
+                                 desc="FF-NN predictions"))
+
+    experiment = {
+        "predicted": [],
+        "real": [],
+        "corr": [],
+        "corr_expected": [],
+        "mse": [],
+        "metrics": []
+    }
+
+    for r in results:
+        experiment["predicted"].append(r[0])
+        experiment["real"].append(r[1])
+        experiment["corr"].append(r[2])
+        experiment["mse"].append(r[3])
+        experiment["metrics"].append(r[4])
+        experiment["corr_expected"].append(np.corrcoef(r[0], all_expected[trainSize:])[1,0])
 
     return experiment
 
