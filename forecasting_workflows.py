@@ -89,7 +89,8 @@ experiments_rbf_mp_data = {
     "all_expected": None,
     "trainSize": None,
     "eps": None,
-    "numBases": None
+    "numBases": None,
+    "pseudoinv": None
 }
 def experiments_rbf_mp(i):
     np.random.seed()
@@ -100,6 +101,7 @@ def experiments_rbf_mp(i):
     trainSize = experiments_rbf_mp_data["trainSize"]
     eps = experiments_rbf_mp_data["eps"]
     numBases = experiments_rbf_mp_data["numBases"]
+    pseudoinv = experiments_rbf_mp_data["pseudoinv"]
 
     selectIdx = np.arange(trainSize)
     np.random.shuffle(selectIdx)
@@ -114,7 +116,7 @@ def experiments_rbf_mp(i):
 
     selectDistances = distMat[:,selectIdx]
 
-    predicted, real = predict_rbf(all_predictor, selectDistances, trainSize, eps)
+    predicted, real = predict_rbf(all_predictor, selectDistances, trainSize, eps, pseudoinv=pseudoinv)
 
     mmags = np.array(all_expected)[trainSize:]
 
@@ -136,13 +138,14 @@ def experiments_rbf_mp(i):
 
     return retval
 
-def experiments_rbf(distMat, all_predictor, all_expected, trainSize, eps, numIter=100, numBases=100, nThreads=1):
+def experiments_rbf(distMat, all_predictor, all_expected, trainSize, eps, numIter=100, numBases=100, pseudoinv=False, nThreads=1):
     experiments_rbf_mp_data["distMat"] = distMat
     experiments_rbf_mp_data["all_predictor"] = all_predictor
     experiments_rbf_mp_data["all_expected"] = all_expected
     experiments_rbf_mp_data["trainSize"] = trainSize
     experiments_rbf_mp_data["eps"] = eps
     experiments_rbf_mp_data["numBases"] = numBases
+    experiments_rbf_mp_data["pseudoinv"] = pseudoinv
 
     # Prevent each thread from creating too many other threads
     os.environ["OMP_NUM_THREADS"] = "2"

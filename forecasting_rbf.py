@@ -1,6 +1,6 @@
 import numpy as np
 
-def predict_rbf(y, distMat, trainSize, eps):
+def predict_rbf(y, distMat, trainSize, eps, pseudoinv=False):
     # Find the weights using only the training set
     trainMat = distMat[:trainSize,:]
     
@@ -10,7 +10,14 @@ def predict_rbf(y, distMat, trainSize, eps):
     trainGram = np.hstack([ np.ones((trainGram.shape[0], 1)), trainGram ])
 
     # Calculate weights
-    w = np.linalg.inv(trainGram.transpose() @ trainGram) @ (trainGram.transpose() @ y[:trainSize])
+    try:
+        if pseudoinv:
+            w = np.linalg.pinv(trainGram.transpose() @ trainGram) @ (trainGram.transpose() @ y[:trainSize])
+        else:
+            w = np.linalg.inv(trainGram.transpose() @ trainGram) @ (trainGram.transpose() @ y[:trainSize])
+    except:
+        real = y[trainSize:]
+        return np.zeros(len(real)), real
 
     # Proceed to testing
     testMat = distMat[trainSize:,:]
