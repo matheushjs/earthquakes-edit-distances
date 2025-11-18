@@ -413,7 +413,7 @@ class EQTimeWindows:
         allTvalues = [2.5, 3, 3.5, 4, 4.5, 5, 5.5]
 
         for quakes, T in zip(self.x_quakes, self.inputw):
-            args_hash = hash(((i[MAG_INDEX] for i in quakes), T, tuple(allTvalues)))
+            args_hash = hash((tuple(self.data["magnitude"]), T, tuple(allTvalues)))
             cache_filename = path.join(MEMOIZATION_DIR, f"indicators_cache_{args_hash}.pkl")
 
             if path.exists(cache_filename):
@@ -463,3 +463,5 @@ if __name__ == "__main__":
     data = load_dataset("ja")
 
     eqtw = EQTimeWindows(data, [7,15,30], 1, nthreads = 22)
+
+    eqtw.calculateXIndicators()
