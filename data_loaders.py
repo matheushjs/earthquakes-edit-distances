@@ -360,9 +360,6 @@ class EQTimeWindows:
 
         self.x_indicators = None
         self.x_indicators_joint = None
-        
-        # Calculate it already so we can do memoization
-        self.calculateXIndicators()
 
         # 4. Save the newly created object to the cache
         print(f"Saving this EQTimeWindows object to cache {cache_filename}...")
@@ -413,9 +410,23 @@ class EQTimeWindows:
 
     def calculateXIndicators(self):
         self.x_indicators = []
+        allTvalues = [2.5, 3, 3.5, 4, 4.5, 5, 5.5]
 
         for quakes, T in zip(self.x_quakes, self.inputw):
-            indic = quakes_to_indicator_features(quakes, T, self.nthreads, tvalues=[2.5, 3, 3.5, 4, 4.5, 5, 5.5])
+            args_hash = hash(((i[MAG_INDEX] for i in quakes), T, tuple(allTvalues)))
+            cache_filename = path.join(MEMOIZATION_DIR, f"indicators_cache_{args_hash}.pkl")
+
+            if path.exists(cache_filename):
+                print(f"Loading cached x_indicators object from {cache_filename}...")
+                with open(cache_filename, 'rb') as f:
+                    indic = pickle.load(f)
+            else:
+                indic = quakes_to_indicator_features(quakes, T, self.nthreads, tvalues=allTvalues)
+
+                print(f"Saving this x_indicators object to cache {cache_filename}...")
+                with open(cache_filename, 'wb') as f:
+                    pickle.dump(indic, f, protocol=pickle.HIGHEST_PROTOCOL)
+
             self.x_indicators.append(indic)
 
         # Now we clean the indicators
