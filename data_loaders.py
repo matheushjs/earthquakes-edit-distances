@@ -7,6 +7,7 @@ import multiprocessing as mp
 import matplotlib.pyplot as plt
 import seaborn as sns
 import tqdm
+from os import path
 
 VALID_REGIONS = ["ja", "gr", "nz", "jma", "toho", "well", "stil", "jmatoho"]
 VALID_CLUSTER_REGIONS = ["ja", "nz", "gr"]
@@ -16,6 +17,7 @@ MAG_INDEX = 1
 LON_INDEX = 2
 LAT_INDEX = 3
 DEP_INDEX = 4
+MEMOIZATION_DIR = "/media/mathjs/HD-ADU3/caching/"
 
 def pkldump(obj, file):
     with open(file, "wb") as fp:
@@ -314,6 +316,33 @@ class EQTimeWindows:
         if not isinstance(outputw, list):
             outputw = [outputw]
 
+        args_hash = hash((tuple(data["magnitude"]), tuple(inputw), tuple(outputw))) # A simple hash of the constructor args
+        cache_filename = path.join(MEMOIZATION_DIR, f"eqtimewindows_cache_{args_hash}.pkl")
+
+        if path.exists(cache_filename):
+            print(f"Loading cached EQTimeWindows object from {cache_filename}...")
+            with open(cache_filename, 'rb') as f:
+                eqtw = pickle.load(f)
+
+            self.inputw = eqtw.inputw
+            self.outputw = eqtw.outputw
+            self.data = eqtw.data
+            self.nthreads = eqtw.nthreads
+
+            self.x_quakes  = eqtw.x_quakes
+            self.y_quakes  = eqtw.y_quakes
+
+            self.x_quakes = eqtw.x_quakes
+            self.y_quakes = eqtw.y_quakes
+
+            self.x_stats = eqtw.x_stats
+            self.y_stats = eqtw.y_stats
+
+            self.x_indicators = eqtw.x_indicators
+            self.x_indicators_joint = eqtw.x_indicators_joint
+
+            return
+            
         self.inputw = inputw
         self.outputw = outputw
         self.data = data
@@ -331,6 +360,14 @@ class EQTimeWindows:
 
         self.x_indicators = None
         self.x_indicators_joint = None
+        
+        # Calculate it already so we can do memoization
+        self.calculateXIndicators()
+
+        # 4. Save the newly created object to the cache
+        print(f"Saving this EQTimeWindows object to cache {cache_filename}...")
+        with open(cache_filename, 'wb') as f:
+            pickle.dump(self, f, protocol=pickle.HIGHEST_PROTOCOL)
 
     def getXQuakesMaxMag(self):
         return [
@@ -415,5 +452,3 @@ if __name__ == "__main__":
     data = load_dataset("ja")
 
     eqtw = EQTimeWindows(data, [7,15,30], 1, nthreads = 22)
-
-    eqtw.calculateXIndicators()
