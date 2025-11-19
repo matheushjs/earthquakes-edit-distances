@@ -432,7 +432,7 @@ class EQTimeWindows:
             self.x_indicators.append(indic)
 
         # Now we clean the indicators
-        for indic in self.x_indicators:
+        for idx, indic in enumerate(self.x_indicators):
             for col in indic.columns:
                 values = indic[col].to_numpy()
                 nanCount = len(values) - sum(np.isfinite(values))
@@ -445,6 +445,8 @@ class EQTimeWindows:
                 else: # Tvalue with not that much NaN, change to average
                     values[~np.isfinite(values)] = np.mean(values[np.isfinite(values)])
                     indic[col] = values
+
+                self.x_indicators[idx] = indic
                 # if "len-quakes" in col: # This catches {}-len-quakes and {}-log-len-quakes
                 # if "mean-mag" in col:
                 # if "energy-rate" in col:
