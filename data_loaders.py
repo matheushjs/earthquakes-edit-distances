@@ -415,7 +415,7 @@ class EQTimeWindows:
         allTvalues = [2.5, 3, 3.5, 4, 4.5, 5, 5.5]
 
         for quakes, T in zip(self.x_quakes, self.inputw):
-            args_hash = hash((tuple(self.data["magnitude"]), T, tuple(allTvalues)))
+            args_hash = hash((tuple(self.data["magnitude"]), tuple(self.inputw), tuple(allTvalues)))
             cache_filename = path.join(MEMOIZATION_DIR, f"indicators_cache_{args_hash}.pkl")
 
             if path.exists(cache_filename):
