@@ -30,7 +30,7 @@ class MyDataset(Dataset):
 
         # print(self.distMat)
         # print(self.targets)
-        
+
     def __getitem__(self, index):
         x1 = self.distMat[index,:] if self.distMat is not None else torch.tensor(float("NaN"))
         x2 = [ feats[index,:] for feats in self.seisFeatures ] if self.seisFeatures is not None else torch.tensor(float("NaN"))
@@ -160,22 +160,40 @@ def predict_ff_nn(
             super(neural_network, self).__init__()
 
             self.numFeatures = numBases
-            
+
             self.log_sigma1 = torch.nn.Parameter(torch.zeros(self.numFeatures))
             self.log_sigma2 = torch.nn.Parameter(torch.zeros(self.numFeatures))
 
-            self.fc1 = nn.Linear(in_features=self.numFeatures, out_features=1)
+            self.ed_fc1 = nn.Linear(in_features=self.numFeatures, out_features=1)
+
+            self.si_fc1 = [
+                nn.Linear(in_features=featWindow.shape[1], out_features=1)
+                for featWindow in seisFeatures
+            ]
+
+            featureCount = self.ed_fc1.out_features + sum([ i.out_features for i in self.si_fc1])
+            self.out_fc = nn.Linear(in_features=featureCount, out_features=1)
 
             self.bn = nn.BatchNorm1d(1)
 
         # x is whatever you set the __getitem__ of the Dataset object to be.
         def forward(self, x):
-            x = rbf_gaussian(x["distMat"],
-                             torch.exp(self.log_sigma1),
-                             torch.exp(self.log_sigma2))
+            layers = []
 
-            x = self.fc1(x)
-            
+            if distMat is not None:
+                ed_x = rbf_gaussian(x["distMat"],
+                                torch.exp(self.log_sigma1),
+                                torch.exp(self.log_sigma2))
+                ed_x = self.ed_fc1(ed_x)
+                layers.append(ed_x)
+
+            if seisFeatures is not None:
+                for l, f in zip(self.si_fc1, x["seisFeatures"]):
+                    layers.append(l(f))
+
+            x = torch.concatenate(layers, dim=1)
+            x = self.out_fc(x)
+
             if x.shape[0] > 1:
                 x = self.bn(x)
 
@@ -192,11 +210,13 @@ def predict_ff_nn(
         
         ed_trainX = distMat[:trainSize,idx]
         ed_testX  = distMat[trainSize:,idx]
-    else:
-        raise Exception("Not implemented.")
+    
+    if seisFeatures is not None:
+        seisFeatures_train = [ i[:trainSize] for i in seisFeatures ]
+        seisFeatures_test = [ i[trainSize:] for i in seisFeatures ]
 
-    train_ds = MyDataset(trainY, distMat=ed_trainX)
-    test_ds  = MyDataset(testY, distMat=ed_testX)
+    train_ds = MyDataset(trainY, distMat=ed_trainX, seisFeatures=seisFeatures_train)
+    test_ds  = MyDataset(testY, distMat=ed_testX, seisFeatures=seisFeatures_test)
 
     train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
     test_loader  = DataLoader(test_ds, batch_size=batch_size, shuffle=False)

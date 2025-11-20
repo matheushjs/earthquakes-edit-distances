@@ -196,7 +196,7 @@ def experiments_ff_nn_mp(i):
     si_activation = experiments_ff_nn_mp_data["si_activation"] 
 
     predicted, testY, corr, mse = predict_ff_nn(all_predictor, trainSize, distMat=distMat, seisFeatures=seisFeatures,
-                      earlyStoppingPatience=50, lr=0.01, verbose=False, numBases=numBases,
+                      earlyStoppingPatience=50, lr=0.01, verbose=False, plot=False, numBases=numBases,
                       si_activation=si_activation, log_steps=1, eval_steps=10, batch_size=128)
 
     metrics = optimize_thresholds(predicted, all_expected[trainSize:])
@@ -256,6 +256,8 @@ if __name__ == "__main__":
     logN = [ np.log(len(i) + 1) for i in eqtw.y_quakes[0][1:] ]
     mmags = eqtw.getXQuakesMaxMag()[0]
 
+    eqtw.calculateXIndicators()
+
     # experiment = experiments_rbf(
     #     distMat,
     #     logN,
@@ -265,7 +267,12 @@ if __name__ == "__main__":
     #     numIter=100,
     #     nThreads=20)
 
-    experiment = experiments_ff_nn(logN, mmags[1:], trainSize, distMat=distMat, numIter=10, nThreads=5)
+    indicators = eqtw.getXIndicators()
+    indicators = [ i.to_numpy() for i in indicators ]
+
+    experiment = experiments_ff_nn(logN, mmags[1:], trainSize,
+                                   distMat=distMat, seisFeatures=indicators,
+                                   numIter=10, nThreads=5)
 
     print(experiment)
     print(np.mean(experiment["corr_expected"]))
