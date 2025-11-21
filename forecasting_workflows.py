@@ -245,9 +245,20 @@ def experiments_ff_nn(all_predictor, all_expected, trainSize,
 
 if __name__ == "__main__":
     data = load_dataset("ja")
+
     distMat = np.load("/media/mathjs/HD-ADU3/distance-matrix-ja-minmag0-inputw7-outputw1-tlambda1.npy")
 
-    eqtw = EQTimeWindows(data, 7, 1, nthreads = 22)
+    # Only if necessary (if distance matrix is old) add the missing dimensions
+    distMat_outputw = 1
+    distMat_inputw  = 7
+    distMat = np.pad(distMat, pad_width=((distMat_inputw-1, distMat_outputw), (distMat_inputw-1, distMat_outputw)), mode='constant', constant_values=0)
+
+    eqtw = EQTimeWindows(data, [7, 15, 30], 1, nthreads = 22)
+
+    # Fix distance matrix to align with eqtw data
+    
+    distMat = distMat[eqtw.valid_indices,:]
+    distMat = distMat[:,eqtw.valid_indices]
 
     trainSize = distMat.shape[0]//2
     trainMat = distMat[:trainSize,:trainSize]
@@ -272,7 +283,7 @@ if __name__ == "__main__":
 
     experiment = experiments_ff_nn(logN, mmags[1:], trainSize,
                                    distMat=distMat, seisFeatures=indicators,
-                                   numIter=10, nThreads=5)
+                                   numIter=5, nThreads=5)
 
     print(experiment)
     print(np.mean(experiment["corr_expected"]))
