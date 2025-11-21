@@ -143,6 +143,8 @@ class conf_ff_nn:
     log_steps = 100
     eval_steps = 100
     earlyStoppingPatience = 100
+    ed_outneurons = 1
+    si_outneurons = 1
     si_activation = "relu"
     lr = 0.001
     plot = False
@@ -175,14 +177,14 @@ def predict_ff_nn(y, trainSize, distMat=None, seisFeatures=None):
             self.outFeatureCount = 0
 
             if distMat is not None:
-                self.ed_fc1 = nn.Linear(in_features=self.numFeatures, out_features=20)
+                self.ed_fc1 = nn.Linear(in_features=self.numFeatures, out_features=conf_ff_nn.ed_outneurons)
                 self.outFeatureCount += self.ed_fc1.out_features
             else:
                 self.ed_fc1 = None
 
             if seisFeatures is not None:
                 self.si_fc1 = [
-                    nn.Linear(in_features=featWindow.shape[1], out_features=20)
+                    nn.Linear(in_features=featWindow.shape[1], out_features=conf_ff_nn.si_outneurons)
                     for featWindow in seisFeatures
                 ]
 
@@ -209,7 +211,14 @@ def predict_ff_nn(y, trainSize, distMat=None, seisFeatures=None):
                 layers.append(ed_x)
 
                 for l, f in zip(self.si_fc1, x["seisFeatures"]):
-                    layers.append(l(f))
+                    value = l(f)
+                    if conf_ff_nn.si_activation == "relu":
+                        value = torch.relu(value)
+                    elif conf_ff_nn.si_activation == "linear":
+                        pass
+                    else:
+                        raise Exception("Invallid 'si_activation'")
+                    layers.append(value)
 
                 x = torch.concatenate(layers, dim=1)
                 x = self.out_fc(x)

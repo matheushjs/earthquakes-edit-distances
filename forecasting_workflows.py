@@ -273,15 +273,20 @@ if __name__ == "__main__":
     indicators = [ i.to_numpy() for i in indicators ]
 
     conf_ff_nn.earlyStoppingPatience = 50
-    conf_ff_nn.lr = 0.01
+    #conf_ff_nn.lr = 0.01
     conf_ff_nn.numBases = 100
     conf_ff_nn.log_steps = 1
     conf_ff_nn.eval_steps = 10
-    conf_ff_nn.verbose = True
+    conf_ff_nn.verbose = False
     conf_ff_nn.plot = False
+    conf_ff_nn.ed_outneurons = 1
+    conf_ff_nn.si_outneurons = 1
+    conf_ff_nn.si_activation = "linear"
+    conf_ff_nn.earlyStoppingPatience = 100
+    conf_ff_nn.batch_size = 64
     experiment = experiments_ff_nn(logN, mmags[1:], trainSize,
-                                   distMat=distMat, seisFeatures=indicators,
-                                   numIter=5, nThreads=5)
+                                   distMat=None, seisFeatures=indicators,
+                                   numIter=10, nThreads=4)
 
     print(experiment)
     print(np.mean(experiment["corr_expected"]))
