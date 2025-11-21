@@ -330,6 +330,7 @@ class EQTimeWindows:
             self.outputw = eqtw.outputw
             self.data = eqtw.data
             self.nthreads = eqtw.nthreads
+            self.valid_indices = eqtw.valid_indices
 
             self.x_quakes  = eqtw.x_quakes
             self.y_quakes  = eqtw.y_quakes
@@ -349,6 +350,7 @@ class EQTimeWindows:
         self.outputw = outputw
         self.data = data
         self.nthreads = nthreads
+        self.valid_indices = None
 
         # prefix 'x' means the variable refers to the X space, the independent variable space (the previous time windows)
         # prefix 'y' means the dependent variable Y space, often the next-window features
@@ -398,6 +400,7 @@ class EQTimeWindows:
         # Gets the indices for which an earthquake time window exists in each quakeSeries
         # in xquakes AND yquakes simultaneously
         indices = np.argwhere(np.all([ [ i is not None for i in quakes ] for quakes in allQuakes ], axis=0)).ravel()
+        self.valid_indices = indices
 
         xquakes = [ [ quakes[idx] for idx in indices ] for quakes in xquakes ]
         yquakes = [ [ quakes[idx] for idx in indices ] for quakes in yquakes ]
