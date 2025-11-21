@@ -164,40 +164,81 @@ def predict_ff_nn(
             self.log_sigma1 = torch.nn.Parameter(torch.zeros(self.numFeatures))
             self.log_sigma2 = torch.nn.Parameter(torch.zeros(self.numFeatures))
 
-            self.ed_fc1 = nn.Linear(in_features=self.numFeatures, out_features=1)
+            self.outFeatureCount = 0
 
-            self.si_fc1 = [
-                nn.Linear(in_features=featWindow.shape[1], out_features=1)
-                for featWindow in seisFeatures
-            ]
+            if distMat is not None:
+                self.ed_fc1 = nn.Linear(in_features=self.numFeatures, out_features=1)
+                self.outFeatureCount += self.ed_fc1.out_features
+            else:
+                self.ed_fc1 = None
 
-            featureCount = self.ed_fc1.out_features + sum([ i.out_features for i in self.si_fc1])
-            self.out_fc = nn.Linear(in_features=featureCount, out_features=1)
+            if seisFeatures is not None:
+                self.si_fc1 = [
+                    nn.Linear(in_features=featWindow.shape[1], out_features=1)
+                    for featWindow in seisFeatures
+                ]
+
+                self.outFeatureCount += sum([ i.out_features for i in self.si_fc1])
+            else:
+                self.si_fc1 = None
+
+            if self.outFeatureCount > 0:
+                self.out_fc = nn.Linear(in_features=self.outFeatureCount, out_features=1)
+            else:
+                self.out_fc = None
 
             self.bn = nn.BatchNorm1d(1)
 
         # x is whatever you set the __getitem__ of the Dataset object to be.
         def forward(self, x):
-            layers = []
+            if distMat is not None and seisFeatures is not None:
+                layers = []
 
-            if distMat is not None:
                 ed_x = rbf_gaussian(x["distMat"],
                                 torch.exp(self.log_sigma1),
                                 torch.exp(self.log_sigma2))
                 ed_x = self.ed_fc1(ed_x)
                 layers.append(ed_x)
 
-            if seisFeatures is not None:
                 for l, f in zip(self.si_fc1, x["seisFeatures"]):
                     layers.append(l(f))
 
-            x = torch.concatenate(layers, dim=1)
-            x = self.out_fc(x)
+                x = torch.concatenate(layers, dim=1)
+                x = self.out_fc(x)
 
-            if x.shape[0] > 1:
-                x = self.bn(x)
+                if x.shape[0] > 1:
+                    x = self.bn(x)
 
-            return x
+                return x
+
+            elif distMat is not None:
+                layers = []
+
+                ed_x = rbf_gaussian(x["distMat"],
+                                torch.exp(self.log_sigma1),
+                                torch.exp(self.log_sigma2))
+                ed_x = self.ed_fc1(ed_x)
+
+                if ed_x.shape[0] > 1:
+                    x = self.bn(ed_x)
+
+                return x
+
+            elif seisFeatures is not None:
+                layers = []
+
+                for l, f in zip(self.si_fc1, x["seisFeatures"]):
+                    layers.append(l(f))
+
+                x = torch.concatenate(layers, dim=1)
+                x = self.out_fc(x)
+
+                if x.shape[0] > 1:
+                    x = self.bn(x)
+                
+                return x
+            
+            raise Exception
 
     if distMat is not None:
         distMat = distMat / np.mean(distMat) / 2
@@ -210,10 +251,16 @@ def predict_ff_nn(
         
         ed_trainX = distMat[:trainSize,idx]
         ed_testX  = distMat[trainSize:,idx]
+    else:
+        ed_trainX = None
+        ed_testX = None
     
     if seisFeatures is not None:
         seisFeatures_train = [ i[:trainSize] for i in seisFeatures ]
         seisFeatures_test = [ i[trainSize:] for i in seisFeatures ]
+    else:
+        seisFeatures_train = None
+        seisFeatures_test = None
 
     train_ds = MyDataset(trainY, distMat=ed_trainX, seisFeatures=seisFeatures_train)
     test_ds  = MyDataset(testY, distMat=ed_testX, seisFeatures=seisFeatures_test)
