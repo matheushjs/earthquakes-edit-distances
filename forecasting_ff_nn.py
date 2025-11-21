@@ -13,6 +13,7 @@ from data_loaders import EQTimeWindows, load_dataset
 import numpy as np
 import matplotlib.pyplot as plt
 import copy
+from dataclasses import dataclass
 
 # \ell norm
 def l_norm(x, p=2):
@@ -135,11 +136,18 @@ def training_procedure(
 
     return best_model, best_eval_loss, best_eval_corr, train_losses, eval_losses, eval_corrs
 
-def predict_ff_nn(
-        y, trainSize, distMat=None, seisFeatures=None, numBases=100,
-        batch_size=128, log_steps=100, eval_steps=100, si_activation="relu",
-        earlyStoppingPatience=100, lr=0.001, plot=False, verbose=False
-):
+@dataclass
+class conf_ff_nn:
+    numBases = 100
+    batch_size = 128
+    log_steps = 100
+    eval_steps = 100
+    earlyStoppingPatience = 100
+    si_activation = "relu"
+    lr = 0.001
+    plot = False
+    verbose = False
+def predict_ff_nn(y, trainSize, distMat=None, seisFeatures=None):
     if distMat is None and seisFeatures is None:
         raise Exception("'distMat' and 'seisFeatures' cannot be both None.")
 
@@ -159,7 +167,7 @@ def predict_ff_nn(
         def __init__(self):
             super(neural_network, self).__init__()
 
-            self.numFeatures = numBases
+            self.numFeatures = conf_ff_nn.numBases
 
             self.log_sigma1 = torch.nn.Parameter(torch.zeros(self.numFeatures))
             self.log_sigma2 = torch.nn.Parameter(torch.zeros(self.numFeatures))
@@ -167,14 +175,14 @@ def predict_ff_nn(
             self.outFeatureCount = 0
 
             if distMat is not None:
-                self.ed_fc1 = nn.Linear(in_features=self.numFeatures, out_features=1)
+                self.ed_fc1 = nn.Linear(in_features=self.numFeatures, out_features=20)
                 self.outFeatureCount += self.ed_fc1.out_features
             else:
                 self.ed_fc1 = None
 
             if seisFeatures is not None:
                 self.si_fc1 = [
-                    nn.Linear(in_features=featWindow.shape[1], out_features=1)
+                    nn.Linear(in_features=featWindow.shape[1], out_features=20)
                     for featWindow in seisFeatures
                 ]
 
@@ -247,7 +255,7 @@ def predict_ff_nn(
 
         idx = np.arange(trainSize)
         np.random.shuffle(idx)
-        idx = idx[:numBases]
+        idx = idx[:conf_ff_nn.numBases]
         
         ed_trainX = distMat[:trainSize,idx]
         ed_testX  = distMat[trainSize:,idx]
@@ -265,8 +273,8 @@ def predict_ff_nn(
     train_ds = MyDataset(trainY, distMat=ed_trainX, seisFeatures=seisFeatures_train)
     test_ds  = MyDataset(testY, distMat=ed_testX, seisFeatures=seisFeatures_test)
 
-    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
-    test_loader  = DataLoader(test_ds, batch_size=batch_size, shuffle=False)
+    train_loader = DataLoader(train_ds, batch_size=conf_ff_nn.batch_size, shuffle=True)
+    test_loader  = DataLoader(test_ds, batch_size=conf_ff_nn.batch_size, shuffle=False)
 
     model = neural_network()
 
@@ -275,17 +283,17 @@ def predict_ff_nn(
     best_model, best_eval_loss, best_eval_corr, \
         train_losses, eval_losses, eval_corrs = \
             training_procedure(model, train_loader, test_loader, epochs=epochs,
-                               lr=lr, earlyStoppingPatience=earlyStoppingPatience,
-                               log_steps=log_steps, eval_steps=eval_steps, verbose=verbose)
+                               lr=conf_ff_nn.lr, earlyStoppingPatience=conf_ff_nn.earlyStoppingPatience,
+                               log_steps=conf_ff_nn.log_steps, eval_steps=conf_ff_nn.eval_steps, verbose=conf_ff_nn.verbose)
 
     trainY = trainY * y_std + y_mean
     testY = testY * y_std + y_mean
 
     # Plotting
-    if plot:
+    if conf_ff_nn.plot:
         plt.figure(figsize=(10, 5))
         plt.plot(np.arange(len(train_losses)), train_losses, label='Train Loss')
-        eval_x = np.arange(eval_steps, eval_steps * len(eval_losses) + 1, eval_steps)
+        eval_x = np.arange(conf_ff_nn.eval_steps, conf_ff_nn.eval_steps * len(eval_losses) + 1, conf_ff_nn.eval_steps)
         plt.plot(eval_x, eval_losses, label='Eval Loss')
         plt.xlabel('Steps')
         plt.ylabel('Loss')
@@ -298,25 +306,25 @@ def predict_ff_nn(
     predicted_train = predicted_train * y_std + y_mean
     real_train = real_train * y_std + y_mean
 
-    if plot:
+    if conf_ff_nn.plot:
         plt.figure(figsize=(10, 5))
         plt.scatter(real_train, predicted_train)
         plt.show()
-    if verbose:
+    if conf_ff_nn.verbose:
         print(np.corrcoef(real_train, predicted_train)[0,1])
         print(np.mean((real_train - predicted_train)**2))
 
     predicted, _ = get_predictions(test_loader, best_model)
     predicted = predicted * y_std + y_mean
 
-    if plot:
+    if conf_ff_nn.plot:
         plt.figure(figsize=(10, 5))
         plt.scatter(testY, predicted)
         plt.show()
     corr = np.corrcoef(testY, predicted)[0,1]
     mse = np.mean((testY - predicted)**2)
     
-    if verbose:
+    if conf_ff_nn.verbose:
         print(corr)
         print(mse)
 

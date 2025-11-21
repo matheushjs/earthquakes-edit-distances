@@ -5,7 +5,7 @@ import multiprocessing as mp
 import os
 import tqdm
 from forecasting_rbf import predict_rbf
-from forecasting_ff_nn import predict_ff_nn
+from forecasting_ff_nn import conf_ff_nn, predict_ff_nn
 from data_loaders import * # For testing
 
 def optimize_thresholds(predicted, mmags, grid_steps=50):
@@ -179,9 +179,7 @@ experiments_ff_nn_mp_data = {
     "seisFeatures": None,
     "all_predictor": None,
     "all_expected": None,
-    "trainSize": None,
-    "numBases": None,
-    "si_activation": None
+    "trainSize": None
 }
 def experiments_ff_nn_mp(i):
     np.random.seed(i + int(time.time()))
@@ -192,29 +190,22 @@ def experiments_ff_nn_mp(i):
     all_predictor = experiments_ff_nn_mp_data["all_predictor"]
     all_expected = experiments_ff_nn_mp_data["all_expected"]
     trainSize = experiments_ff_nn_mp_data["trainSize"]
-    numBases = experiments_ff_nn_mp_data["numBases"]
-    si_activation = experiments_ff_nn_mp_data["si_activation"] 
 
-    predicted, testY, corr, mse = predict_ff_nn(all_predictor, trainSize, distMat=distMat, seisFeatures=seisFeatures,
-                      earlyStoppingPatience=50, lr=0.01, verbose=False, plot=False, numBases=numBases,
-                      si_activation=si_activation, log_steps=1, eval_steps=10, batch_size=128)
+    predicted, testY, corr, mse = predict_ff_nn(all_predictor, trainSize, distMat=distMat, seisFeatures=seisFeatures)
 
     metrics = optimize_thresholds(predicted, all_expected[trainSize:])
 
     return predicted, testY, corr, mse, metrics
 
 def experiments_ff_nn(all_predictor, all_expected, trainSize,
-        distMat=None, seisFeatures=None, numBases=100, si_activation="relu",
-        numIter=10, nThreads=1
+        distMat=None, seisFeatures=None, numIter=10, nThreads=1
 ):
     experiments_ff_nn_mp_data.update({
         "distMat": distMat,
         "seisFeatures": seisFeatures,
         "all_predictor": all_predictor,
         "all_expected": all_expected,
-        "trainSize": trainSize,
-        "numBases": numBases,
-        "si_activation": si_activation
+        "trainSize": trainSize
     })
 
     allArgs = range(numIter)
@@ -281,6 +272,13 @@ if __name__ == "__main__":
     indicators = eqtw.getXIndicators()
     indicators = [ i.to_numpy() for i in indicators ]
 
+    conf_ff_nn.earlyStoppingPatience = 50
+    conf_ff_nn.lr = 0.01
+    conf_ff_nn.numBases = 100
+    conf_ff_nn.log_steps = 1
+    conf_ff_nn.eval_steps = 10
+    conf_ff_nn.verbose = True
+    conf_ff_nn.plot = False
     experiment = experiments_ff_nn(logN, mmags[1:], trainSize,
                                    distMat=distMat, seisFeatures=indicators,
                                    numIter=5, nThreads=5)
