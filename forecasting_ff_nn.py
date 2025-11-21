@@ -245,14 +245,21 @@ def predict_ff_nn(y, trainSize, distMat=None, seisFeatures=None):
                 layers = []
 
                 for l, f in zip(self.si_fc1, x["seisFeatures"]):
-                    layers.append(l(f))
+                    value = l(f)
+                    if conf_ff_nn.si_activation == "relu":
+                        value = torch.relu(value)
+                    elif conf_ff_nn.si_activation == "linear":
+                        pass
+                    else:
+                        raise Exception("Invallid 'si_activation'")
+                    layers.append(value)
 
                 x = torch.concatenate(layers, dim=1)
                 x = self.out_fc(x)
 
                 if x.shape[0] > 1:
                     x = self.bn(x)
-                
+
                 return x
             
             raise Exception
